@@ -174,6 +174,14 @@
   // ---------- quick inline edit (admin: tap a cell and type) ----------
   var blurTimer = null, blurValue = "";
 
+  var toastTimer = null;
+  function toast(msg) {
+    var t = document.getElementById("toast");
+    if (!t) { t = el("div", "toast"); t.id = "toast"; t.setAttribute("role", "status"); document.body.appendChild(t); }
+    t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.hidden = true; }, 2200);
+  }
   function durText(n) { var m = n * 30; return (m >= 60 ? Math.floor(m / 60) + "시간" : "") + (m % 60 ? (m >= 60 ? " " : "") + "30분" : ""); }
   function previewCell(r, i, hour) {
     var name = state.inlineValue || "";
@@ -188,9 +196,13 @@
     var name = (state.inlineValue || "").trim();
     var day = kst().date, rooms = state.day === day ? state.rooms : emptyRooms();
     var other = rooms[cur.room][next];
-    if (next >= SLOTS) state.inlineMsg = "마지막 시간이에요";
-    else if (other && other !== name) state.inlineMsg = "다음 칸에 '" + other + "' 예약이 있어요";
-    else { cur.span = (cur.span || 0) + 1; state.inlineMsg = ""; }
+    if (next >= SLOTS) toast("10:00가 마지막 시간이에요");
+    else if (other && other !== name) toast("다음 칸에 '" + other + "' 예약이 있어서 더 늘릴 수 없어요");
+    else {
+      cur.span = (cur.span || 0) + 1;
+      var a = label(cur.slot).split("~")[0], b = label(cur.slot + cur.span).split("~")[1];
+      toast(a + "~" + b + " (" + durText(cur.span + 1) + ")");
+    }
     render(); focusInline(true);
   }
   function inlineCell(r, i, v, hour) {
@@ -226,15 +238,11 @@
       blurTimer = setTimeout(function () { blurTimer = null; commitInline(blurValue, null); }, 250);
     };
     d.appendChild(inp);
-    var row = el("div", "ext");
     var eb = el("button", "ext-btn", "+30분"); eb.type = "button"; eb.tabIndex = -1;
     eb.setAttribute("aria-label", "30분 더 예약");
     eb.addEventListener("mousedown", function (e) { e.preventDefault(); }); // 입력창 포커스 유지
     eb.onclick = function (e) { e.preventDefault(); extendInline(); };
-    row.appendChild(eb);
-    row.appendChild(el("span", "ext-dur", durText((state.inline.span || 0) + 1)));
-    d.appendChild(row);
-    if (state.inlineMsg) d.appendChild(el("div", "ext-msg", state.inlineMsg));
+    d.appendChild(eb);
     return d;
   }
   function focusInline(keepText) {
