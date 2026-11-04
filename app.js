@@ -410,7 +410,7 @@
     d.appendChild(acts);
     // 키보드 단축키 안내 (입력 중에만, 키보드가 있는 기기에서만 보임)
     var keys = el("div", "keyhint");
-    [["Enter", "30분"], [mod + "+Enter", "1시간"], ["Space Space", "수업"], ["Esc", "취소"], ["↑↓", "이동"]].forEach(function (p) {
+    [["Enter", "30분"], [mod + "+Enter", "1시간"], ["Esc", "취소"], ["↑↓", "이동"]].forEach(function (p) {
       var it = el("span", "kh"); it.appendChild(el("kbd", null, p[0])); it.appendChild(document.createTextNode(" " + p[1])); keys.appendChild(it);
     });
     d.appendChild(keys);
