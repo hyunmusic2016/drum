@@ -352,11 +352,22 @@
       blurTimer = setTimeout(function () { blurTimer = null; commitInline(blurValue, null); }, 250);
     };
     d.appendChild(inp);
+    var ok = el("button", "ok-btn", "확인"); ok.type = "button"; ok.tabIndex = -1;
+    ok.addEventListener("mousedown", function (e) { e.preventDefault(); }); // 입력창 포커스 유지
+    ok.onclick = function (e) {
+      e.preventDefault();
+      if (blurTimer) { clearTimeout(blurTimer); blurTimer = null; }
+      done = true;
+      commitInline(state.inlineValue != null ? state.inlineValue : inp.value, null);
+    };
+    var acts = el("div", "acts" + (i >= SLOTS - 2 ? " up" : ""));
+    acts.appendChild(ok);
     var eb = el("button", "ext-btn", "+30분"); eb.type = "button"; eb.tabIndex = -1;
     eb.setAttribute("aria-label", "30분 더 예약");
     eb.addEventListener("mousedown", function (e) { e.preventDefault(); }); // 입력창 포커스 유지
     eb.onclick = function (e) { e.preventDefault(); extendInline(); };
-    d.appendChild(eb);
+    acts.appendChild(eb);
+    d.appendChild(acts);
     return d;
   }
   function focusInline(keepText) {
