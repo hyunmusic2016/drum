@@ -85,6 +85,7 @@
     var root = document.getElementById("root");
     root.textContent = "";
     root.classList.toggle("editing", state.editing);
+    document.body.classList.toggle("has-bar", state.editing);
 
     var hd = el("header"), l = el("div");
     l.appendChild(el("div", "eyebrow", "PRACTICE ROOM BOOKING"));
