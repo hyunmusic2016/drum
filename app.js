@@ -139,7 +139,7 @@
     root.appendChild(sh);
 
     root.appendChild(el("p", "note", state.isAdmin
-      ? "칸을 누르고 바로 입력하세요. Enter로 저장, Esc로 취소, ↑↓·Tab으로 옆 칸 이동, 비우고 Enter를 누르면 지워집니다. 여러 칸을 한 번에 바꾸려면 예약 편집을 쓰세요. 날짜가 바뀌면 표는 자동으로 비워집니다."
+      ? "칸을 누르고 바로 입력하세요. +30분을 누르면 아래 칸까지 같은 이름으로 늘어나요. Enter로 저장, Esc로 취소, ↑↓·Tab으로 옆 칸 이동, 비우고 Enter를 누르면 지워집니다. 여러 칸을 한 번에 바꾸려면 예약 편집을 쓰세요. 날짜가 바뀌면 표는 자동으로 비워집니다."
       : "이 페이지는 보기 전용입니다. 예약은 관리자에게 문의해 주세요. 날짜가 바뀌면 표는 자동으로 비워집니다."));
 
     if (sb) root.appendChild(adminArea());
@@ -148,7 +148,10 @@
 
   function cell(r, i, rooms, hour) {
     var v = rooms[r.k][i] || "", prev = i > 0 ? (rooms[r.k][i - 1] || "") : "";
-    if (state.inline && state.inline.room === r.k && state.inline.slot === i) return inlineCell(r, i, v, hour);
+    if (state.inline && state.inline.room === r.k) {
+      if (state.inline.slot === i) return inlineCell(r, i, v, hour);
+      if (i > state.inline.slot && i <= state.inline.slot + (state.inline.span || 0)) return previewCell(r, i, hour);
+    }
     var c = el("button", "cell " + r.c + (v ? " on" : "") + (hour ? " hour" : "") + (v && v === prev ? " cont" : "") + (v.indexOf("수업") !== -1 ? " lesson" : ""));
     c.type = "button";
     c.setAttribute("aria-label", r.n + " " + label(i) + " " + (v || "비어 있음"));
@@ -171,10 +174,38 @@
   // ---------- quick inline edit (admin: tap a cell and type) ----------
   var blurTimer = null, blurValue = "";
 
+  function durText(n) { var m = n * 30; return (m >= 60 ? Math.floor(m / 60) + "시간" : "") + (m % 60 ? (m >= 60 ? " " : "") + "30분" : ""); }
+  function previewCell(r, i, hour) {
+    var name = state.inlineValue || "";
+    var d = el("div", "cell " + r.c + " on cont preview" + (hour ? " hour" : "") + (name.indexOf("수업") !== -1 ? " lesson" : ""));
+    d.appendChild(el("span", "nm", name));
+    return d;
+  }
+  function extendInline() {
+    var cur = state.inline; if (!cur) return;
+    if (blurTimer) { clearTimeout(blurTimer); blurTimer = null; }
+    var next = cur.slot + (cur.span || 0) + 1;
+    var name = (state.inlineValue || "").trim();
+    var day = kst().date, rooms = state.day === day ? state.rooms : emptyRooms();
+    var other = rooms[cur.room][next];
+    if (next >= SLOTS) state.inlineMsg = "마지막 시간이에요";
+    else if (other && other !== name) state.inlineMsg = "다음 칸에 '" + other + "' 예약이 있어요";
+    else { cur.span = (cur.span || 0) + 1; state.inlineMsg = ""; }
+    render(); focusInline(true);
+  }
   function inlineCell(r, i, v, hour) {
     var d = el("div", "cell " + r.c + " inline" + (hour ? " hour" : ""));
     var inp = el("input");
-    inp.id = "inline-input"; inp.maxLength = 20; inp.value = v; inp.disabled = state.inlineBusy;
+    if (state.inlineValue == null) state.inlineValue = v;
+    inp.id = "inline-input"; inp.maxLength = 20; inp.value = state.inlineValue; inp.disabled = state.inlineBusy;
+    inp.oninput = function () {
+      state.inlineValue = inp.value;
+      var nm = (inp.value || "");
+      document.querySelectorAll(".cell.preview").forEach(function (pc) {
+        pc.firstChild.textContent = nm;
+        pc.classList.toggle("lesson", nm.indexOf("수업") !== -1);
+      });
+    };
     inp.setAttribute("aria-label", r.n + " " + label(i) + " 예약자 이름");
     inp.setAttribute("enterkeyhint", "done"); inp.autocomplete = "off";
     var done = false;
@@ -184,7 +215,7 @@
       var cur = state.inline;
       if (e.key === "Enter") { e.preventDefault(); go(null); }
       else if (e.key === "Escape") { e.preventDefault(); done = true; closeInline(); }
-      else if (e.key === "ArrowDown" && cur.slot < SLOTS - 1) { e.preventDefault(); go({ room: cur.room, slot: cur.slot + 1 }); }
+      else if (e.key === "ArrowDown" && cur.slot + (cur.span || 0) < SLOTS - 1) { e.preventDefault(); go({ room: cur.room, slot: cur.slot + (cur.span || 0) + 1 }); }
       else if (e.key === "ArrowUp" && cur.slot > 0) { e.preventDefault(); go({ room: cur.room, slot: cur.slot - 1 }); }
       else if (e.key === "Tab") { e.preventDefault(); go({ room: cur.room === "band" ? "drum" : "band", slot: cur.slot }); }
     };
@@ -195,20 +226,33 @@
       blurTimer = setTimeout(function () { blurTimer = null; commitInline(blurValue, null); }, 250);
     };
     d.appendChild(inp);
+    var row = el("div", "ext");
+    var eb = el("button", "ext-btn", "+30분"); eb.type = "button"; eb.tabIndex = -1;
+    eb.setAttribute("aria-label", "30분 더 예약");
+    eb.addEventListener("mousedown", function (e) { e.preventDefault(); }); // 입력창 포커스 유지
+    eb.onclick = function (e) { e.preventDefault(); extendInline(); };
+    row.appendChild(eb);
+    row.appendChild(el("span", "ext-dur", durText((state.inline.span || 0) + 1)));
+    d.appendChild(row);
+    if (state.inlineMsg) d.appendChild(el("div", "ext-msg", state.inlineMsg));
     return d;
   }
-  function focusInline() {
+  function focusInline(keepText) {
     var inp = document.getElementById("inline-input");
-    if (inp) { inp.focus(); inp.select(); }
+    if (!inp) return;
+    inp.focus();
+    if (keepText) { var n = inp.value.length; try { inp.setSelectionRange(n, n); } catch (e) {} }
+    else inp.select();
   }
   function selectCell(target) {
     if (state.inlineBusy) { state.queued = target; return; }
     if (blurTimer) { clearTimeout(blurTimer); blurTimer = null; commitInline(blurValue, target); return; }
-    state.inline = target; state.flash = "";
+    state.inline = { room: target.room, slot: target.slot, span: 0 }; state.flash = "";
+    state.inlineValue = null; state.inlineMsg = "";
     render(); focusInline(); // 같은 탭 안에서 바로 포커스해야 휴대폰 키보드가 열림
   }
   function closeInline() {
-    var cur = state.inline; state.inline = null; render();
+    var cur = state.inline; state.inline = null; state.inlineValue = null; state.inlineMsg = ""; render();
     if (cur) focusCell(cur);
   }
   function focusCell(cur) {
@@ -218,27 +262,32 @@
   function afterCommit(cur, next) {
     var q = state.queued; state.queued = null;
     next = next || q;
-    state.inline = next || null;
+    state.inline = next ? { room: next.room, slot: next.slot, span: 0 } : null;
+    state.inlineValue = null; state.inlineMsg = "";
     render();
     if (next) focusInline(); else focusCell(cur);
   }
   function commitInline(value, next) {
     var cur = state.inline; if (!cur) return;
     var name = (value || "").trim(), day = kst().date;
-    var before = state.day === day ? (state.rooms[cur.room][cur.slot] || "") : "";
-    if (name === before) { afterCommit(cur, next); return; }
-    state.inlineBusy = true;
     if (state.day !== day) { state.rooms = emptyRooms(); state.day = day; }
-    var prevVal = state.rooms[cur.room][cur.slot];
-    if (name) state.rooms[cur.room][cur.slot] = name; else delete state.rooms[cur.room][cur.slot];
+    var slots = [];
+    for (var k = cur.slot; k <= cur.slot + (cur.span || 0); k++) slots.push(k);
+    var prev = {};
+    slots.forEach(function (k) { prev[k] = state.rooms[cur.room][k]; });
+    var changed = slots.some(function (k) { return (prev[k] || "") !== name; });
+    if (!changed) { afterCommit(cur, next); return; }
+    state.inlineBusy = true;
+    slots.forEach(function (k) { if (name) state.rooms[cur.room][k] = name; else delete state.rooms[cur.room][k]; });
     state.inline = null; render(); // 저장 중에도 입력한 값이 보이게
     state.inline = cur;
+    var now = new Date().toISOString();
     var q = name
-      ? sb.from("reservations").upsert([{ day: day, room: cur.room, slot: cur.slot, name: name, updated_at: new Date().toISOString() }])
-      : sb.from("reservations").delete().match({ day: day, room: cur.room, slot: cur.slot });
+      ? sb.from("reservations").upsert(slots.map(function (k) { return { day: day, room: cur.room, slot: k, name: name, updated_at: now }; }))
+      : sb.from("reservations").delete().eq("day", day).eq("room", cur.room).in("slot", slots);
     function fail(msg) {
-      state.inlineBusy = false; state.inline = null; state.queued = null;
-      if (prevVal) state.rooms[cur.room][cur.slot] = prevVal; else delete state.rooms[cur.room][cur.slot];
+      state.inlineBusy = false; state.inline = null; state.queued = null; state.inlineValue = null;
+      slots.forEach(function (k) { if (prev[k]) state.rooms[cur.room][k] = prev[k]; else delete state.rooms[cur.room][k]; });
       state.flash = msg; render();
     }
     q.then(function (res) {
@@ -248,7 +297,7 @@
           : "저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
         return;
       }
-      state.inlineBusy = false;
+      state.inlineBusy = false; state.inlineValue = null;
       afterCommit(cur, next);
     }, function () { fail("저장하지 못했어요. 인터넷 연결을 확인해 주세요."); });
   }
