@@ -14,6 +14,7 @@
   --bg:#f5f6f4; --paper:#ffffff; --ink:#1d2321; --muted:#68716d; --line:#d9ddda; --band:#eceeec;
   --band-room:#c9d8f6; --band-room-ink:#1f3d7a; --drum-room:#d3e8cc; --drum-room-ink:#2b5a22;
   --accent:#d0562b; --sel:#1d2321;
+  --lesson:#fbcf9f; --lesson-ink:#7a3410; /* '수업' 칸 */
   --f-body:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
   --name-size:16px; /* 예약자 이름 글씨 크기 (모든 칸 동일) */
@@ -22,7 +23,7 @@
 @media (prefers-color-scheme: dark){:root{
   --bg:#141716; --paper:#1c201f; --ink:#e8ebe9; --muted:#9aa39f; --line:#2f3533; --band:#242928;
   --band-room:#26375c; --band-room-ink:#c6d6fb; --drum-room:#2a4426; --drum-room-ink:#cfe8c6;
-  --accent:#f0784c; --sel:#e8ebe9; color-scheme:dark}}
+  --accent:#f0784c; --sel:#e8ebe9; --lesson:#6b3a17; --lesson-ink:#ffdcbc; color-scheme:dark}}
 *{box-sizing:border-box}
 html{padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%}
@@ -59,6 +60,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .cell.hour{border-top-color:var(--muted)}
 .cell.b.on{background:var(--band-room);color:var(--band-room-ink)}
 .cell.d.on{background:var(--drum-room);color:var(--drum-room-ink)}
+.cell.on.lesson{background:var(--lesson);color:var(--lesson-ink)}
 .cell.cont{border-top-color:transparent}
 .editing .cell{cursor:pointer}
 .editing .cell:hover{box-shadow:inset 0 0 0 1px var(--muted)}
@@ -89,9 +91,9 @@ input[type=email],.bar input{flex:1 1 180px;min-width:0;font:inherit;font-size:1
 </head>
 <body>
 <main id="root" class="wrap"></main>
-<footer class="foot"><span class="ver" title="페이지 버전">v1.2.1</span></footer>
-<script src="config.js?v=1.2.1"></script>
+<footer class="foot"><span class="ver" title="페이지 버전">v1.3.0</span></footer>
+<script src="config.js?v=1.3.0"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="app.js?v=1.2.1"></script>
+<script src="app.js?v=1.3.0"></script>
 </body>
 </html>

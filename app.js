@@ -149,7 +149,7 @@
   function cell(r, i, rooms, hour) {
     var v = rooms[r.k][i] || "", prev = i > 0 ? (rooms[r.k][i - 1] || "") : "";
     if (state.inline && state.inline.room === r.k && state.inline.slot === i) return inlineCell(r, i, v, hour);
-    var c = el("button", "cell " + r.c + (v ? " on" : "") + (hour ? " hour" : "") + (v && v === prev ? " cont" : ""));
+    var c = el("button", "cell " + r.c + (v ? " on" : "") + (hour ? " hour" : "") + (v && v === prev ? " cont" : "") + (v.indexOf("수업") !== -1 ? " lesson" : ""));
     c.type = "button";
     c.setAttribute("aria-label", r.n + " " + label(i) + " " + (v || "비어 있음"));
     if (v) c.appendChild(el("span", "nm", v));
