@@ -132,9 +132,7 @@
     }
     root.appendChild(sh);
 
-    root.appendChild(el("p", "note", state.isAdmin
-      ? "칸을 누르고 바로 입력하세요. 마우스로 드래그해 여러 칸을 고른 뒤 Delete 키를 누르면 한 번에 지워져요. +30분을 누르면 아래 칸까지 같은 이름으로 늘어나요. Enter로 저장, Esc로 취소, ↑↓·Tab으로 옆 칸 이동, 비우고 Enter를 누르면 지워집니다. 여러 칸을 한 번에 바꾸려면 예약 편집을 쓰세요. 날짜가 바뀌면 표는 자동으로 비워집니다."
-      : "이 페이지는 보기 전용입니다. 예약은 관리자에게 문의해 주세요. 날짜가 바뀌면 표는 자동으로 비워집니다."));
+    var gap = el("div"); gap.style.height = "12px"; root.appendChild(gap);
 
     if (sb) root.appendChild(adminArea());
     renderBar();
