@@ -116,9 +116,6 @@
       root.appendChild(el("p", "notice warn", "아직 Supabase가 연결되지 않았어요. config.js에 프로젝트 주소와 anon key를 넣어 주세요. (README 참고)"));
     } else if (state.loadError) {
       root.appendChild(el("p", "notice warn", state.loadError));
-    } else if (state.loaded && !state.editing &&
-      !Object.keys(rooms.band).length && !Object.keys(rooms.drum).length) {
-      root.appendChild(el("p", "notice", "오늘은 아직 예약이 없어요. 모든 시간이 비어 있습니다."));
     } else if (!state.loaded) {
       root.appendChild(el("p", "notice", "예약 현황을 불러오는 중…"));
     }
