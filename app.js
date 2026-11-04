@@ -10,7 +10,7 @@
 
   var cfg = window.APP_CONFIG || {};
   var configured = cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY &&
-    cfg.SUPABASE_URL.indexOf("YOUR-PROJECT") === -1 && window.supabase;
+    cfg.SUPABASE_URL.indexOf("YOUR-PROJECT") === -1 && cfg.SUPABASE_ANON_KEY.indexOf("YOUR-") === -1 && window.supabase;
   var sb = configured ? window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY) : null;
 
   var state = {
