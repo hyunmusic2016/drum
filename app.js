@@ -175,12 +175,24 @@
   var blurTimer = null, blurValue = "";
 
   var toastTimer = null;
-  function toast(msg) {
+  function toast(msg, actionLabel, action) {
     var t = document.getElementById("toast");
     if (!t) { t = el("div", "toast"); t.id = "toast"; t.setAttribute("role", "status"); document.body.appendChild(t); }
-    t.textContent = msg; t.hidden = false;
+    t.textContent = ""; t.appendChild(el("span", null, msg));
+    t.classList.toggle("has-action", !!action);
+    if (action) {
+      var b = el("button", "toast-btn", actionLabel); b.type = "button";
+      b.onclick = function () { t.hidden = true; action(); };
+      t.appendChild(b);
+    }
+    t.hidden = false;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { t.hidden = true; }, 2200);
+    toastTimer = setTimeout(function () { t.hidden = true; }, action ? 6000 : 2200);
+  }
+  // 영문 상태로 친 이름을 한글로 (dbals -> 유민)
+  function koFix(raw) {
+    var fixed = window.fixKorean ? window.fixKorean(raw) : raw;
+    return { text: fixed, changed: fixed !== raw, raw: raw };
   }
   function durText(n) { var m = n * 30; return (m >= 60 ? Math.floor(m / 60) + "시간" : "") + (m % 60 ? (m >= 60 ? " " : "") + "30분" : ""); }
   function previewCell(r, i, hour) {
@@ -275,9 +287,18 @@
     render();
     if (next) focusInline(); else focusCell(cur);
   }
+  function writeSlots(room, slots, name) {
+    var day = kst().date;
+    slots.forEach(function (k) { state.rooms[room][k] = name; });
+    render();
+    var now = new Date().toISOString();
+    sb.from("reservations").upsert(slots.map(function (k) { return { day: day, room: room, slot: k, name: name, updated_at: now }; }))
+      .then(function (res) { if (res.error) { toast("되돌리지 못했어요. 칸을 눌러 직접 고쳐 주세요."); load(); } });
+  }
   function commitInline(value, next) {
     var cur = state.inline; if (!cur) return;
-    var name = (value || "").trim(), day = kst().date;
+    var fx = koFix((value || "").trim());
+    var name = fx.text, day = kst().date;
     if (state.day !== day) { state.rooms = emptyRooms(); state.day = day; }
     var slots = [];
     for (var k = cur.slot; k <= cur.slot + (cur.span || 0); k++) slots.push(k);
@@ -307,6 +328,7 @@
       }
       state.inlineBusy = false; state.inlineValue = null;
       afterCommit(cur, next);
+      if (fx.changed) toast(fx.raw + " → " + name + " 한글로 바꿨어요", "되돌리기", function () { writeSlots(cur.room, slots, fx.raw); });
     }, function () { fail("저장하지 못했어요. 인터넷 연결을 확인해 주세요."); });
   }
 
@@ -386,10 +408,16 @@
     render();
   }
   function apply(name) {
-    name = (name || "").trim();
-    Object.keys(state.sel).forEach(function (key) {
+    var fx = koFix((name || "").trim());
+    name = fx.text;
+    var keys = Object.keys(state.sel);
+    keys.forEach(function (key) {
       var p = key.split(":");
       if (name) state.draft[p[0]][p[1]] = name; else delete state.draft[p[0]][p[1]];
+    });
+    if (fx.changed) toast(fx.raw + " → " + name + " 한글로 바꿨어요", "되돌리기", function () {
+      keys.forEach(function (key) { var p = key.split(":"); state.draft[p[0]][p[1]] = fx.raw; });
+      render();
     });
     state.sel = {};
     render();

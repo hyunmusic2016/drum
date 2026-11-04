@@ -72,7 +72,9 @@ button{font:inherit;color:inherit;cursor:pointer}
 .cell.inline input:focus{outline:none}
 .ext-btn{flex:none;height:36px;border:1px solid var(--accent);background:var(--paper);color:var(--accent);border-radius:6px;padding:0 6px;font-size:12px;font-weight:700;line-height:1;white-space:nowrap;touch-action:manipulation}
 .ext-btn:active{background:var(--accent);color:var(--paper)}
-.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:calc(100% - 32px);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;font-size:14px;z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.2);pointer-events:none}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:max-content;max-width:calc(100% - 32px);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;font-size:14px;z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.2);pointer-events:none}
+.toast.has-action{pointer-events:auto;display:flex;align-items:center;gap:12px}
+.toast-btn{border:0;background:none;color:var(--accent);font-weight:700;font-size:14px;padding:4px 0;white-space:nowrap;text-decoration:underline}
 .cell.preview{outline:2px dashed var(--accent);outline-offset:-3px;display:flex;align-items:center;justify-content:center}
 .note{margin-top:12px;color:var(--muted);font-size:13px}
 .foot{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:8px calc(24px + env(safe-area-inset-bottom,0px));display:flex;justify-content:flex-end}
@@ -94,9 +96,10 @@ input[type=email],.bar input{flex:1 1 180px;min-width:0;font:inherit;font-size:1
 </head>
 <body>
 <main id="root" class="wrap"></main>
-<footer class="foot"><span class="ver" title="페이지 버전">v1.5.1</span></footer>
-<script src="config.js?v=1.5.1"></script>
+<footer class="foot"><span class="ver" title="페이지 버전">v1.6.0</span></footer>
+<script src="config.js?v=1.6.0"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="app.js?v=1.5.1"></script>
+<script src="hangul.js?v=1.6.0"></script>
+<script src="app.js?v=1.6.0"></script>
 </body>
 </html>
