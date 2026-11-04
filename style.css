@@ -66,6 +66,14 @@ button{font:inherit;color:inherit;cursor:pointer}
 .ok-btn{flex:none;height:36px;border:1px solid var(--ok);background:var(--ok);color:#fff;border-radius:6px;padding:0 7px;font-size:12px;font-weight:700;line-height:1;white-space:nowrap;touch-action:manipulation}
 .ok-btn:active{filter:brightness(.9)}
 .acts{display:flex;gap:3px;flex:none}
+.keyhint{display:none}
+@media (hover:hover) and (pointer:fine){
+  .cell.inline{position:relative;overflow:visible;z-index:6}
+  .keyhint{display:flex;gap:10px;position:absolute;top:calc(100% + 2px);left:3px;white-space:nowrap;padding:6px 10px;background:var(--ink);color:var(--paper);border-radius:8px;font-size:12px;font-weight:400;box-shadow:0 6px 16px rgba(0,0,0,.18);pointer-events:none}
+  .keyhint.up{top:auto;bottom:calc(100% + 2px)}
+  .cell.d .keyhint{left:auto;right:3px}
+  .keyhint kbd{font-family:var(--f-mono);font-size:11px;padding:1px 5px;border-radius:4px;background:color-mix(in srgb,var(--paper) 18%,transparent)}
+}
 @media (max-width:600px){
   .cell.inline{position:relative;overflow:visible;z-index:6}
   .acts{position:absolute;top:calc(100% - 2px);right:3px;padding:4px;background:var(--paper);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 16px rgba(0,0,0,.15)}

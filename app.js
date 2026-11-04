@@ -386,6 +386,13 @@
     eb.onclick = function (e) { e.preventDefault(); extendInline(); };
     acts.appendChild(eb);
     d.appendChild(acts);
+    // 키보드 단축키 안내 (입력 중에만, 키보드가 있는 기기에서만 보임)
+    var mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+    var keys = el("div", "keyhint" + (i >= SLOTS - 2 ? " up" : ""));
+    [["Enter", "30분"], [(mac ? "⌘" : "Ctrl") + "+Enter", "1시간"], ["Esc", "취소"], ["↑↓ Tab", "이동"]].forEach(function (p) {
+      var it = el("span", "kh"); it.appendChild(el("kbd", null, p[0])); it.appendChild(document.createTextNode(" " + p[1])); keys.appendChild(it);
+    });
+    d.appendChild(keys);
     return d;
   }
   function focusInline(keepText) {
