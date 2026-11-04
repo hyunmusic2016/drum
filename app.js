@@ -251,6 +251,15 @@
     if (e.target && e.target.id === "inline-input") return; // 입력칸에서 처리한 키
     var a = document.activeElement;
     if (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA")) return;
+    var fc0 = a && a.classList && a.classList.contains("quick") ? { room: a.dataset.room, slot: +a.dataset.slot } : null;
+    // 글자 키: 선택된 칸에 바로 타이핑 (Enter 필요 없음). 기본 동작을 막지 않아 그 글자가 새 입력칸으로 들어감
+    var printable = (e.key && e.key.length === 1) || e.key === "Process" || e.keyCode === 229;
+    if (printable && (state.range || fc0 || state.lastCell)) {
+      var tgt = state.range ? (state.range.head || state.range.anchor) : (fc0 || state.lastCell);
+      if (state.range) clearRange(true);
+      typeInto(tgt);
+      return;
+    }
     if (state.range) { // Shift+화살표로 고른 범위
       var g = state.range;
       if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); deleteRange(); }
@@ -263,6 +272,11 @@
       return;
     }
     // 아무 칸도 열려 있지 않을 때: 화살표·Enter·F2 로 키보드 조작 시작
+    if (isArrow(e.key) && e.shiftKey && (fc0 || state.lastCell)) { // 닫힌 칸에서 Shift+화살표: 범위 선택
+      e.preventDefault(); var an = fc0 || state.lastCell, nx = stepCell(an, e.key);
+      if (nx) setRange(an, nx);
+      return;
+    }
     if (isArrow(e.key) || e.key === "Enter" || e.key === "F2") {
       var fc = a && a.classList && a.classList.contains("quick") ? { room: a.dataset.room, slot: +a.dataset.slot } : null;
       var start = fc || state.lastCell || nowCell();
@@ -504,6 +518,17 @@
     if (!KB) return null; // 휴대폰: Enter 는 저장 후 닫기
     var n = cur.slot + (cur.span || 0) + 1;
     return n < SLOTS ? { room: cur.room, slot: n } : null;
+  }
+  // 칸을 빈 입력칸으로 열고 포커스 (이어서 누른 글자가 바로 들어가게)
+  function typeInto(target) {
+    if (state.inlineBusy || blurTimer) { selectCell(target); return; }
+    var day = kst().date, rooms = state.day === day ? state.rooms : emptyRooms();
+    state.inline = { room: target.room, slot: target.slot, span: 0 }; state.flash = "";
+    state.inlineOrig = rooms[target.room][target.slot] || ""; state.inlineValue = "";
+    state.inlineMsg = ""; state.lastCell = { room: target.room, slot: target.slot };
+    render();
+    var inp = document.getElementById("inline-input");
+    if (inp) { placeKeyhint(); inp.focus(); }
   }
   function selectCell(target) {
     if (state.inlineBusy) { state.queued = target; return; }
