@@ -63,6 +63,12 @@ button{font:inherit;color:inherit;cursor:pointer}
 .editing .cell{cursor:pointer}
 .editing .cell:hover{box-shadow:inset 0 0 0 1px var(--muted)}
 .cell.sel{box-shadow:inset 0 0 0 3px var(--sel)!important}
+.cell{touch-action:manipulation;-webkit-user-select:none;user-select:none}
+.cell.quick{cursor:text}
+.cell.quick:hover{box-shadow:inset 0 0 0 1px var(--muted)}
+.cell.inline{padding:3px;display:flex}
+.cell.inline input{width:100%;min-width:0;font:inherit;font-size:16px;font-weight:500;text-align:center;border:2px solid var(--accent);border-radius:6px;background:var(--paper);color:var(--ink);padding:4px}
+.cell.inline input:focus{outline:none}
 .note{margin-top:12px;color:var(--muted);font-size:13px}
 .foot{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:8px calc(24px + env(safe-area-inset-bottom,0px));display:flex;justify-content:flex-end}
 .ver{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
@@ -83,9 +89,9 @@ input[type=email],.bar input{flex:1 1 180px;min-width:0;font:inherit;font-size:1
 </head>
 <body>
 <main id="root" class="wrap"></main>
-<footer class="foot"><span class="ver" title="페이지 버전">v1.1.0</span></footer>
-<script src="config.js?v=1.1.0"></script>
+<footer class="foot"><span class="ver" title="페이지 버전">v1.2.0</span></footer>
+<script src="config.js?v=1.2.0"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="app.js?v=1.1.0"></script>
+<script src="app.js?v=1.2.0"></script>
 </body>
 </html>

@@ -17,7 +17,8 @@
     day: "", rooms: emptyRooms(), loaded: false, loadError: "",
     session: null, isAdmin: false, live: false,
     editing: false, draft: null, sel: {}, busy: false, status: "",
-    showLogin: false, loginMsg: "", who: ""
+    showLogin: false, loginMsg: "", who: "",
+    inline: null, inlineBusy: false, flash: ""
   };
   var channel = null;
 
@@ -54,7 +55,7 @@
       var rooms = emptyRooms();
       (res.data || []).forEach(function (r) { if (rooms[r.room]) rooms[r.room][r.slot] = r.name; });
       state.day = day; state.rooms = rooms; state.loaded = true; state.loadError = "";
-      if (!state.editing) render();
+      if (!state.editing && !state.inline) render();
     });
   }
 
@@ -108,6 +109,9 @@
     hd.appendChild(tools);
     root.appendChild(hd);
 
+    if (state.flash) {
+      root.appendChild(el("p", "notice warn", state.flash));
+    }
     if (!sb) {
       root.appendChild(el("p", "notice warn", "아직 Supabase가 연결되지 않았어요. config.js에 프로젝트 주소와 anon key를 넣어 주세요. (README 참고)"));
     } else if (state.loadError) {
@@ -135,7 +139,7 @@
     root.appendChild(sh);
 
     root.appendChild(el("p", "note", state.isAdmin
-      ? "저장하면 링크로 보는 모든 사람의 화면에 바로 반영돼요. 날짜가 바뀌면 표는 자동으로 비워집니다."
+      ? "칸을 두 번 누르면 바로 입력할 수 있어요. Enter로 저장, Esc로 취소, 비우고 Enter를 누르면 지워집니다. 여러 칸을 한 번에 바꾸려면 예약 편집을 쓰세요. 날짜가 바뀌면 표는 자동으로 비워집니다."
       : "이 페이지는 보기 전용입니다. 예약은 관리자에게 문의해 주세요. 날짜가 바뀌면 표는 자동으로 비워집니다."));
 
     if (sb) root.appendChild(adminArea());
@@ -144,6 +148,7 @@
 
   function cell(r, i, rooms, hour) {
     var v = rooms[r.k][i] || "", prev = i > 0 ? (rooms[r.k][i - 1] || "") : "";
+    if (state.inline && state.inline.room === r.k && state.inline.slot === i) return inlineCell(r, i, v, hour);
     var c = el("button", "cell " + r.c + (v ? " on" : "") + (hour ? " hour" : "") + (v && v === prev ? " cont" : ""));
     c.type = "button";
     c.setAttribute("aria-label", r.n + " " + label(i) + " " + (v || "비어 있음"));
@@ -153,10 +158,77 @@
       if (state.sel[key]) c.classList.add("sel");
       c.setAttribute("aria-pressed", state.sel[key] ? "true" : "false");
       c.onclick = function () { if (state.sel[key]) delete state.sel[key]; else state.sel[key] = 1; render(); };
+    } else if (state.isAdmin) {
+      c.classList.add("quick");
+      c.title = "두 번 눌러 입력";
+      var last = 0;
+      c.addEventListener("pointerup", function (e) {
+        if (e.button > 0) return;
+        var now = Date.now();
+        if (now - last < 400) { last = 0; openInline(r.k, i); } else last = now;
+      });
+      c.onkeydown = function (e) { if (e.key === "Enter" || e.key === "F2") { e.preventDefault(); openInline(r.k, i); } };
     } else {
       c.tabIndex = -1;
     }
     return c;
+  }
+
+  // ---------- quick inline edit (admin, double tap) ----------
+  function inlineCell(r, i, v, hour) {
+    var d = el("div", "cell " + r.c + " inline" + (hour ? " hour" : ""));
+    var inp = el("input");
+    inp.id = "inline-input"; inp.maxLength = 20; inp.value = v; inp.disabled = state.inlineBusy;
+    inp.setAttribute("aria-label", r.n + " " + label(i) + " 예약자 이름");
+    inp.setAttribute("enterkeyhint", "done"); inp.autocomplete = "off";
+    var done = false;
+    inp.onkeydown = function (e) {
+      if (e.isComposing || e.keyCode === 229) return; // 한글 조합 중 Enter 무시
+      if (e.key === "Enter") { e.preventDefault(); done = true; commitInline(inp.value); }
+      else if (e.key === "Escape") { e.preventDefault(); done = true; closeInline(); }
+    };
+    inp.onblur = function () { if (!done && !state.inlineBusy) { done = true; commitInline(inp.value); } };
+    d.appendChild(inp);
+    setTimeout(function () { inp.focus(); inp.select(); }, 0);
+    return d;
+  }
+  function openInline(room, slot) {
+    if (state.inlineBusy) return;
+    state.inline = { room: room, slot: slot }; state.flash = "";
+    render();
+  }
+  function closeInline() {
+    var cur = state.inline; state.inline = null; render();
+    if (cur) focusCell(cur);
+  }
+  function focusCell(cur) {
+    var cells = document.querySelectorAll(".cell." + (cur.room === "band" ? "b" : "d"));
+    if (cells[cur.slot]) cells[cur.slot].focus();
+  }
+  function commitInline(value) {
+    var cur = state.inline; if (!cur) return;
+    var name = (value || "").trim(), day = kst().date;
+    var before = state.day === day ? (state.rooms[cur.room][cur.slot] || "") : "";
+    if (name === before) { closeInline(); return; }
+    state.inlineBusy = true;
+    var q = name
+      ? sb.from("reservations").upsert([{ day: day, room: cur.room, slot: cur.slot, name: name, updated_at: new Date().toISOString() }])
+      : sb.from("reservations").delete().match({ day: day, room: cur.room, slot: cur.slot });
+    q.then(function (res) {
+      state.inlineBusy = false; state.inline = null;
+      if (res.error) {
+        state.flash = /row-level security|permission/i.test(res.error.message)
+          ? "저장 권한이 없어요. 관리자 이메일로 로그인했는지 확인해 주세요."
+          : "저장하지 못했어요. 잠시 후 다시 시도해 주세요.";
+        render(); return;
+      }
+      if (state.day !== day) { state.rooms = emptyRooms(); state.day = day; }
+      if (name) state.rooms[cur.room][cur.slot] = name; else delete state.rooms[cur.room][cur.slot];
+      render(); focusCell(cur);
+    }, function () {
+      state.inlineBusy = false; state.inline = null;
+      state.flash = "저장하지 못했어요. 인터넷 연결을 확인해 주세요."; render();
+    });
   }
 
   function renderHeaderLive() {
@@ -229,6 +301,7 @@
 
   // ---------- editing ----------
   function startEdit() {
+    state.inline = null;
     state.draft = { band: Object.assign({}, state.rooms.band), drum: Object.assign({}, state.rooms.drum) };
     state.sel = {}; state.editing = true; state.status = "";
     render();
@@ -284,7 +357,7 @@
   function tick() {
     var k = kst(), sec = new Date().getSeconds();
     var ms = ((30 - (k.min % 30)) * 60 - sec) * 1000 + 500;
-    setTimeout(function () { if (!state.editing) render(); tick(); }, Math.max(ms, 5000));
+    setTimeout(function () { if (!state.editing && !state.inline) render(); tick(); }, Math.max(ms, 5000));
   }
 
   // ---------- boot ----------
