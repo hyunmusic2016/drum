@@ -303,6 +303,15 @@
     d.appendChild(el("span", "nm", name));
     return d;
   }
+  // 다음 칸으로 늘릴 수 없으면 이유를, 늘릴 수 있으면 ""
+  function extendBlock(cur, name) {
+    var next = cur.slot + (cur.span || 0) + 1;
+    var day = kst().date, rooms = state.day === day ? state.rooms : emptyRooms();
+    var other = rooms[cur.room][next];
+    if (next >= SLOTS) return "10:00가 마지막 시간이에요";
+    if (other && other !== name) return "다음 칸에 '" + other + "' 예약이 있어요";
+    return "";
+  }
   function extendInline() {
     var cur = state.inline; if (!cur) return;
     if (blurTimer) { clearTimeout(blurTimer); blurTimer = null; }
@@ -339,7 +348,16 @@
     inp.onkeydown = function (e) {
       if (e.isComposing || e.keyCode === 229) return; // 한글 조합 중 키 무시
       var cur = state.inline;
-      if (e.key === "Enter") { e.preventDefault(); go(null); }
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { // Ctrl(⌘)+Enter: 1시간으로 저장
+        e.preventDefault();
+        if (!(cur.span > 0)) {
+          var why = extendBlock(cur, (inp.value || "").trim());
+          if (why) { toast(why + " (1시간 저장 불가)"); return; }
+          cur.span = 1;
+        }
+        go(null);
+      }
+      else if (e.key === "Enter") { e.preventDefault(); go(null); }
       else if (e.key === "Escape") { e.preventDefault(); done = true; closeInline(); }
       else if (e.key === "ArrowDown" && cur.slot + (cur.span || 0) < SLOTS - 1) { e.preventDefault(); go({ room: cur.room, slot: cur.slot + (cur.span || 0) + 1 }); }
       else if (e.key === "ArrowUp" && cur.slot > 0) { e.preventDefault(); go({ room: cur.room, slot: cur.slot - 1 }); }
