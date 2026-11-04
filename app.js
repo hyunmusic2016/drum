@@ -260,13 +260,8 @@
         toast(/row-level security|permission/i.test(err.error.message) ? "지울 권한이 없어요. 관리자로 로그인했는지 확인해 주세요." : "지우지 못했어요. 잠시 후 다시 시도해 주세요.");
         return;
       }
-      toast(removed.length + "칸 지웠어요", "되돌리기", function () {
-        var now = new Date().toISOString();
-        removed.forEach(function (x) { state.rooms[x.room][x.slot] = x.name; });
-        render();
-        sb.from("reservations").upsert(removed.map(function (x) { return { day: day, room: x.room, slot: x.slot, name: x.name, updated_at: now }; }))
-          .then(function (r2) { if (r2.error) { toast("되돌리지 못했어요."); load(); } });
-      });
+      record(removed.map(function (x) { return { room: x.room, slot: x.slot, before: x.name, after: "" }; }));
+      toast(removed.length + "칸 지웠어요", "되돌리기", undo);
     }, function () {
       removed.forEach(function (x) { state.rooms[x.room][x.slot] = x.name; });
       render(); toast("지우지 못했어요. 인터넷 연결을 확인해 주세요.");
@@ -345,23 +340,41 @@
     inp.setAttribute("enterkeyhint", "done"); inp.autocomplete = "off";
     var done = false;
     function go(next) { done = true; commitInline(inp.value, next); }
-    inp.onkeydown = function (e) {
-      if (e.isComposing || e.keyCode === 229) return; // 한글 조합 중 키 무시
-      var cur = state.inline;
-      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { // Ctrl(⌘)+Enter: 1시간으로 저장
-        e.preventDefault();
+    // 키 -> 실행할 동작 (실행 시점의 입력값을 읽음)
+    function actionFor(e) {
+      var cur = state.inline; if (!cur) return null;
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) return function () { // Ctrl(⌘)+Enter: 1시간으로 저장
+        if (done || state.inline !== cur) return;
         if (!(cur.span > 0)) {
           var why = extendBlock(cur, (inp.value || "").trim());
           if (why) { toast(why + " (1시간 저장 불가)"); return; }
           cur.span = 1;
         }
         go(null);
-      }
-      else if (e.key === "Enter") { e.preventDefault(); go(null); }
-      else if (e.key === "Escape") { e.preventDefault(); done = true; closeInline(); }
-      else if (e.key === "ArrowDown" && cur.slot + (cur.span || 0) < SLOTS - 1) { e.preventDefault(); go({ room: cur.room, slot: cur.slot + (cur.span || 0) + 1 }); }
-      else if (e.key === "ArrowUp" && cur.slot > 0) { e.preventDefault(); go({ room: cur.room, slot: cur.slot - 1 }); }
-      else if (e.key === "Tab") { e.preventDefault(); } // Tab 은 아무 동작 안 함
+      };
+      if (e.key === "Enter") return function () { if (!done && state.inline === cur) go(null); };
+      if (e.key === "ArrowDown" && cur.slot + (cur.span || 0) < SLOTS - 1)
+        return function () { if (!done && state.inline === cur) go({ room: cur.room, slot: cur.slot + (cur.span || 0) + 1 }); };
+      if (e.key === "ArrowUp" && cur.slot > 0)
+        return function () { if (!done && state.inline === cur) go({ room: cur.room, slot: cur.slot - 1 }); };
+      return null;
+    }
+    var pending = null;
+    // 한글 조합 중에 누른 Enter·⌘+Enter·↑↓ 는 조합이 끝나자마자 실행 (두 번 누를 필요 없음)
+    inp.addEventListener("compositionend", function () {
+      if (!pending) return;
+      var a = pending; pending = null;
+      setTimeout(a, 0);
+    });
+    inp.onkeydown = function (e) {
+      if (e.key === "Escape") { e.preventDefault(); pending = null; done = true; closeInline(); return; }
+      if (e.key === "Tab") { e.preventDefault(); return; } // Tab 은 아무 동작 안 함
+      var a = actionFor(e);
+      if (!a) return;
+      if (e.isComposing) { pending = a; return; }        // 조합 끝(compositionend) 뒤에 실행
+      e.preventDefault();
+      if (e.keyCode === 229) { setTimeout(a, 0); return; } // 사파리: 조합이 막 끝난 직후의 키
+      a();
     };
     // 다른 칸을 누르면 blur 다음에 click 이 오므로 잠깐 기다렸다가 저장
     inp.onblur = function () {
@@ -388,16 +401,26 @@
     d.appendChild(acts);
     // 키보드 단축키 안내 (입력 중에만, 키보드가 있는 기기에서만 보임)
     var mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
-    var keys = el("div", "keyhint" + (i >= SLOTS - 2 ? " up" : ""));
+    var keys = el("div", "keyhint");
     [["Enter", "30분"], [(mac ? "⌘" : "Ctrl") + "+Enter", "1시간"], ["Esc", "취소"], ["↑↓", "이동"]].forEach(function (p) {
       var it = el("span", "kh"); it.appendChild(el("kbd", null, p[0])); it.appendChild(document.createTextNode(" " + p[1])); keys.appendChild(it);
     });
     d.appendChild(keys);
     return d;
   }
+  // 단축키 안내가 입력칸을 가리면 화면 위쪽으로
+  function placeKeyhint() {
+    var k = document.querySelector(".keyhint"), inp = document.getElementById("inline-input");
+    if (!k || !inp) return;
+    var r = inp.getBoundingClientRect();
+    k.classList.toggle("top", r.bottom > window.innerHeight - 90);
+  }
+  window.addEventListener("scroll", placeKeyhint, { passive: true });
+  window.addEventListener("resize", placeKeyhint);
   function focusInline(keepText) {
     var inp = document.getElementById("inline-input");
     if (!inp) return;
+    placeKeyhint();
     inp.focus();
     if (keepText) { var n = inp.value.length; try { inp.setSelectionRange(n, n); } catch (e) {} }
     else inp.select();
@@ -425,8 +448,60 @@
     render();
     if (next) focusInline(); else focusCell(cur);
   }
+  // ---------- undo / redo (⌘/Ctrl+Z, ⌘/Ctrl+X) ----------
+  // 한 번의 동작 = [{room, slot, before, after}] ("" = 빈 칸)
+  var undoStack = [], redoStack = [];
+  function record(changes) {
+    changes = changes.filter(function (c) { return c.before !== c.after; });
+    if (!changes.length) return;
+    undoStack.push(changes); if (undoStack.length > 50) undoStack.shift();
+    redoStack = [];
+  }
+  function applyChanges(changes, useBefore) {
+    var day = kst().date;
+    if (state.day !== day) { state.rooms = emptyRooms(); state.day = day; }
+    changes.forEach(function (c) {
+      var v = useBefore ? c.before : c.after;
+      if (v) state.rooms[c.room][c.slot] = v; else delete state.rooms[c.room][c.slot];
+    });
+    render();
+    var now = new Date().toISOString(), ups = [], jobs = [];
+    ROOMS.forEach(function (r) {
+      var dels = [];
+      changes.forEach(function (c) {
+        if (c.room !== r.k) return;
+        var v = useBefore ? c.before : c.after;
+        if (v) ups.push({ day: day, room: c.room, slot: c.slot, name: v, updated_at: now }); else dels.push(c.slot);
+      });
+      if (dels.length) jobs.push(sb.from("reservations").delete().eq("day", day).eq("room", r.k).in("slot", dels));
+    });
+    if (ups.length) jobs.push(sb.from("reservations").upsert(ups));
+    return Promise.all(jobs).then(function (res) {
+      if (res.some(function (x) { return x.error; })) { toast("저장하지 못했어요. 새로고침해 주세요."); load(); return false; }
+      return true;
+    }, function () { toast("저장하지 못했어요. 인터넷 연결을 확인해 주세요."); load(); return false; });
+  }
+  function undo() {
+    var ch = undoStack.pop(); if (!ch) { toast("되돌릴 작업이 없어요"); return; }
+    redoStack.push(ch);
+    applyChanges(ch, true); toast("되돌렸어요");
+  }
+  function redo() {
+    var ch = redoStack.pop(); if (!ch) { toast("다시 할 작업이 없어요"); return; }
+    undoStack.push(ch);
+    applyChanges(ch, false); toast("다시 했어요");
+  }
+  document.addEventListener("keydown", function (e) {
+    if (!state.isAdmin || state.editing || !(e.ctrlKey || e.metaKey) || e.altKey) return;
+    var a = document.activeElement;
+    if (state.inline || (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA"))) return; // 입력 중엔 브라우저 기본 동작
+    if (e.code === "KeyZ" && !e.shiftKey) { e.preventDefault(); undo(); }
+    else if (e.code === "KeyX" || e.code === "KeyY" || (e.code === "KeyZ" && e.shiftKey)) { e.preventDefault(); redo(); }
+  });
+
   function writeSlots(room, slots, name) {
     var day = kst().date;
+    record(slots.map(function (k) { return { room: room, slot: k, before: state.rooms[room][k] || "", after: name }; }));
     slots.forEach(function (k) { state.rooms[room][k] = name; });
     render();
     var now = new Date().toISOString();
@@ -465,6 +540,7 @@
         return;
       }
       state.inlineBusy = false; state.inlineValue = null;
+      record(slots.map(function (k) { return { room: cur.room, slot: k, before: prev[k] || "", after: name }; }));
       afterCommit(cur, next);
       if (fx.changed) toast(fx.raw + " → " + name + " 한글로 바꿨어요", "되돌리기", function () { writeSlots(cur.room, slots, fx.raw); });
     }, function () { fail("저장하지 못했어요. 인터넷 연결을 확인해 주세요."); });
