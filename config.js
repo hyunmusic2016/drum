@@ -1,0 +1,7 @@
+// Supabase 대시보드 > Project Settings > API 에서 복사해 붙여넣으세요.
+// anon key 는 공개되어도 되는 키입니다. (쓰기 권한은 DB 정책이 막아 줍니다)
+// service_role key 는 절대 여기에 넣지 마세요.
+window.APP_CONFIG = {
+  SUPABASE_URL: "https://YOUR-PROJECT.supabase.co",
+  SUPABASE_ANON_KEY: "YOUR-ANON-KEY"
+};
