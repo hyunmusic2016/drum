@@ -8,6 +8,7 @@
     { k: "drum", n: "드럼연습실", c: "d" }
   ];
 
+  var KB = window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches; // 키보드·마우스 기기
   var cfg = window.APP_CONFIG || {};
   var configured = cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY &&
     cfg.SUPABASE_URL.indexOf("YOUR-PROJECT") === -1 && cfg.SUPABASE_ANON_KEY.indexOf("YOUR-") === -1 && window.supabase;
@@ -86,7 +87,12 @@
   }
 
   // ---------- render ----------
+  var rendering = false; // 다시 그리는 중에 사라지는 입력칸의 blur 는 무시
   function render() {
+    rendering = true;
+    try { renderInner(); } finally { rendering = false; }
+  }
+  function renderInner() {
     var k = kst();
     if (state.loaded && state.day !== k.date && !state.editing) { state.rooms = emptyRooms(); state.day = k.date; load(); }
     var rooms = state.editing ? state.draft : state.rooms;
@@ -184,7 +190,7 @@
   }
   function setRange(a, b) {
     var ra = roomIdx(a.room), rb = roomIdx(b.room);
-    state.range = { r0: Math.min(ra, rb), r1: Math.max(ra, rb), s0: Math.min(a.slot, b.slot), s1: Math.max(a.slot, b.slot), anchor: a };
+    state.range = { r0: Math.min(ra, rb), r1: Math.max(ra, rb), s0: Math.min(a.slot, b.slot), s1: Math.max(a.slot, b.slot), anchor: a, head: b };
     paintRange();
   }
   function extendRange(k, i) { setRange(state.range.anchor, { room: k, slot: i }); }
@@ -227,12 +233,43 @@
   document.addEventListener("pointerdown", function (e) {
     if (state.range && !(e.target.closest && (e.target.closest(".cell.quick") || e.target.closest(".toast")))) clearRange();
   });
+  // 화살표 한 칸 이동 (방 2개 x 시간 18칸 안에서)
+  function stepCell(c, key) {
+    var ri = roomIdx(c.room), sl = c.slot;
+    if (key === "ArrowUp") sl--; else if (key === "ArrowDown") sl++;
+    else if (key === "ArrowLeft") ri--; else if (key === "ArrowRight") ri++;
+    if (ri < 0 || ri > 1 || sl < 0 || sl >= SLOTS) return null;
+    return { room: ROOMS[ri].k, slot: sl };
+  }
+  function isArrow(k) { return k === "ArrowUp" || k === "ArrowDown" || k === "ArrowLeft" || k === "ArrowRight"; }
+  function nowCell() {
+    var m = kst().min, sl = Math.floor((m - START) / 30);
+    return { room: "band", slot: Math.max(0, Math.min(SLOTS - 1, sl)) };
+  }
   document.addEventListener("keydown", function (e) {
-    if (!state.range || state.inline || state.editing) return;
+    if (!state.isAdmin || state.inline || state.editing || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.target && e.target.id === "inline-input") return; // 입력칸에서 처리한 키
     var a = document.activeElement;
     if (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA")) return;
-    if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); deleteRange(); }
-    else if (e.key === "Escape") { clearRange(); }
+    if (state.range) { // Shift+화살표로 고른 범위
+      var g = state.range;
+      if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); deleteRange(); }
+      else if (e.key === "Escape") { e.preventDefault(); var h0 = g.head; clearRange(); if (h0) selectCell(h0); }
+      else if (isArrow(e.key) && e.shiftKey) { e.preventDefault(); var nh = stepCell(g.head || g.anchor, e.key); if (nh) setRange(g.anchor, nh); }
+      else if (isArrow(e.key) || e.key === "Enter") {
+        e.preventDefault(); var base = g.head || g.anchor; clearRange();
+        selectCell(e.key === "Enter" ? base : (stepCell(base, e.key) || base));
+      }
+      return;
+    }
+    // 아무 칸도 열려 있지 않을 때: 화살표·Enter·F2 로 키보드 조작 시작
+    if (isArrow(e.key) || e.key === "Enter" || e.key === "F2") {
+      var fc = a && a.classList && a.classList.contains("quick") ? { room: a.dataset.room, slot: +a.dataset.slot } : null;
+      var start = fc || state.lastCell || nowCell();
+      if (fc && isArrow(e.key)) start = stepCell(fc, e.key) || fc;
+      e.preventDefault();
+      selectCell(start);
+    }
   });
   function rangeCount() { var g = state.range; return g ? (g.r1 - g.r0 + 1) * (g.s1 - g.s0 + 1) : 0; }
   function deleteRange() {
@@ -244,10 +281,12 @@
       var k = ROOMS[ri].k;
       for (var i = g.s0; i <= g.s1; i++) if (state.rooms[k][i]) removed.push({ room: k, slot: i, name: state.rooms[k][i] });
     }
+    var back = { room: ROOMS[g.r0].k, slot: g.s0 };
     state.range = null;
-    if (!removed.length) { paintRange(); toast("지울 예약이 없어요"); return; }
+    if (!removed.length) { paintRange(); toast("지울 예약이 없어요"); if (KB) selectCell(back); return; }
     removed.forEach(function (x) { delete state.rooms[x.room][x.slot]; });
     render();
+    if (KB) selectCell(back);
     var jobs = ROOMS.map(function (r) {
       var slots = removed.filter(function (x) { return x.room === r.k; }).map(function (x) { return x.slot; });
       return slots.length ? sb.from("reservations").delete().eq("day", day).eq("room", r.k).in("slot", slots) : null;
@@ -326,7 +365,7 @@
   function inlineCell(r, i, v, hour) {
     var d = el("div", "cell " + r.c + " inline" + (hour ? " hour" : ""));
     var inp = el("input");
-    if (state.inlineValue == null) state.inlineValue = v;
+    if (state.inlineValue == null) { state.inlineValue = v; state.inlineOrig = v; }
     inp.id = "inline-input"; inp.maxLength = 20; inp.value = state.inlineValue; inp.disabled = state.inlineBusy;
     inp.oninput = function (e) {
       // 스페이스 두 번 -> '수업' (휴대폰이 바꿔 넣는 '. ' 도 같은 것으로 봄)
@@ -356,9 +395,9 @@
           if (why) { toast(why + " (1시간 저장 불가)"); return; }
           cur.span = 1;
         }
-        go(null);
+        go(below(cur));
       };
-      if (e.key === "Enter") return function () { if (!done && state.inline === cur) go(null); };
+      if (e.key === "Enter") return function () { if (!done && state.inline === cur) go(below(cur)); };
       if (e.key === "ArrowDown" && cur.slot + (cur.span || 0) < SLOTS - 1)
         return function () { if (!done && state.inline === cur) go({ room: cur.room, slot: cur.slot + (cur.span || 0) + 1 }); };
       if (e.key === "ArrowUp" && cur.slot > 0)
@@ -382,7 +421,26 @@
       setTimeout(a, 0);
     });
     inp.onkeydown = function (e) {
-      if (e.key === "Escape") { e.preventDefault(); pending = null; done = true; closeInline(); return; }
+      var cur = state.inline;
+      var untouched = inp.value === (state.inlineOrig || "") && !(cur && cur.span > 0);
+      if (e.key === "Escape") {
+        e.preventDefault(); pending = null;
+        if (!untouched) { // 고치던 내용만 되돌리고 칸은 그대로
+          cur.span = 0; state.inlineValue = null; render(); focusInline(); return;
+        }
+        done = true; closeInline(); return;
+      }
+      if (!e.isComposing && untouched && cur) {
+        var allSel = inp.selectionStart === 0 && inp.selectionEnd === inp.value.length;
+        if ((e.key === "Delete" || e.key === "Backspace") && allSel && inp.value) { // 칸 비우기
+          e.preventDefault(); done = true; commitInline("", { room: cur.room, slot: cur.slot }); return;
+        }
+        if (isArrow(e.key) && e.shiftKey) { // Shift+화살표: 여러 칸 선택 시작
+          var nb = stepCell(cur, e.key);
+          if (nb) { e.preventDefault(); done = true; var c0 = { room: cur.room, slot: cur.slot }; closeInline(); setRange(c0, nb); }
+          return;
+        }
+      }
       if (e.key === "Tab") { e.preventDefault(); return; } // Tab 은 아무 동작 안 함
       var a = actionFor(e);
       if (!a) return;
@@ -393,7 +451,7 @@
     };
     // 다른 칸을 누르면 blur 다음에 click 이 오므로 잠깐 기다렸다가 저장
     inp.onblur = function () {
-      if (done || state.inlineBusy) return;
+      if (rendering || done || state.inlineBusy) return;
       done = true; blurValue = inp.value;
       blurTimer = setTimeout(function () { blurTimer = null; commitInline(blurValue, null); }, 250);
     };
@@ -442,11 +500,16 @@
     if (keepText) { var n = inp.value.length; try { inp.setSelectionRange(n, n); } catch (e) {} }
     else inp.select();
   }
+  function below(cur) {
+    if (!KB) return null; // 휴대폰: Enter 는 저장 후 닫기
+    var n = cur.slot + (cur.span || 0) + 1;
+    return n < SLOTS ? { room: cur.room, slot: n } : null;
+  }
   function selectCell(target) {
     if (state.inlineBusy) { state.queued = target; return; }
     if (blurTimer) { clearTimeout(blurTimer); blurTimer = null; commitInline(blurValue, target); return; }
     state.inline = { room: target.room, slot: target.slot, span: 0 }; state.flash = "";
-    state.inlineValue = null; state.inlineMsg = "";
+    state.inlineValue = null; state.inlineMsg = ""; state.lastCell = { room: target.room, slot: target.slot };
     render(); focusInline(); // 같은 탭 안에서 바로 포커스해야 휴대폰 키보드가 열림
   }
   function closeInline() {
@@ -462,6 +525,7 @@
     next = next || q;
     state.inline = next ? { room: next.room, slot: next.slot, span: 0 } : null;
     state.inlineValue = null; state.inlineMsg = "";
+    if (next) state.lastCell = { room: next.room, slot: next.slot };
     render();
     if (next) focusInline(); else focusCell(cur);
   }
@@ -511,9 +575,20 @@
   document.addEventListener("keydown", function (e) {
     if (!state.isAdmin || state.editing || !(e.ctrlKey || e.metaKey) || e.altKey) return;
     var a = document.activeElement;
-    if (state.inline || (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA"))) return; // 입력 중엔 브라우저 기본 동작
-    if (e.code === "KeyZ" && !e.shiftKey) { e.preventDefault(); undo(); }
-    else if (e.code === "KeyX" || e.code === "KeyY" || (e.code === "KeyZ" && e.shiftKey)) { e.preventDefault(); redo(); }
+    var isUndo = e.code === "KeyZ" && !e.shiftKey, isRedo = e.code === "KeyX" || e.code === "KeyY" || (e.code === "KeyZ" && e.shiftKey);
+    if (!isUndo && !isRedo) return;
+    var reopen = null;
+    if (state.inline) {
+      var inp = document.getElementById("inline-input");
+      // 칸만 열어 두고 아무것도 안 고쳤을 때는 표 전체 되돌리기, 고치는 중이면 글자 되돌리기(브라우저 기본)
+      if (!inp || inp.value !== (state.inlineOrig || "") || state.inline.span > 0) return;
+      reopen = { room: state.inline.room, slot: state.inline.slot };
+      inp.onblur = null; // 닫힐 때 저장하지 않게
+      state.inline = null; state.inlineValue = null;
+    } else if (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA")) return;
+    e.preventDefault();
+    if (isUndo) undo(); else redo();
+    if (reopen) selectCell(reopen);
   });
 
   function writeSlots(room, slots, name) {
