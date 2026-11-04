@@ -47,16 +47,23 @@
   function btn(cls, txt, fn) { var b = el("button", cls, txt); b.type = "button"; b.onclick = fn; return b; }
 
   // ---------- data ----------
+  var lessonsDay = "";
+  // 오늘 요일의 정기 수업을 예약표에 넣기 (하루 한 번, 서버에서 중복 방지)
+  function applyLessons(day) {
+    if (lessonsDay === day) return Promise.resolve();
+    lessonsDay = day;
+    return Promise.resolve(sb.rpc("apply_today_lessons")).then(function () {}, function () {});
+  }
   function load() {
     if (!sb) return Promise.resolve();
     var day = kst().date;
-    return sb.from("reservations").select("room,slot,name").eq("day", day).then(function (res) {
+    return applyLessons(day).then(function () { return sb.from("reservations").select("room,slot,name").eq("day", day).then(function (res) {
       if (res.error) { state.loadError = "예약을 불러오지 못했어요. 잠시 후 새로고침해 주세요."; render(); return; }
       var rooms = emptyRooms();
       (res.data || []).forEach(function (r) { if (rooms[r.room]) rooms[r.room][r.slot] = r.name; });
       state.day = day; state.rooms = rooms; state.loaded = true; state.loadError = "";
       if (!state.editing && !state.inline) render();
-    });
+    }); });
   }
 
   function subscribe() {
@@ -440,6 +447,7 @@
       var row = el("div", "tools");
       var email = state.session.user && state.session.user.email;
       row.appendChild(el("span", "note", email + (state.isAdmin ? " (관리자)" : " · 관리자 권한 없음")));
+      if (state.isAdmin) { var al = el("a", "btn link", "관리자 페이지"); al.href = "admin.html"; row.appendChild(al); }
       row.appendChild(btn("btn link", "로그아웃", function () { sb.auth.signOut(); }));
       wrap.appendChild(row);
       return wrap;
