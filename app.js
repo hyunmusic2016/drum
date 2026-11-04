@@ -328,7 +328,13 @@
     var inp = el("input");
     if (state.inlineValue == null) state.inlineValue = v;
     inp.id = "inline-input"; inp.maxLength = 20; inp.value = state.inlineValue; inp.disabled = state.inlineBusy;
-    inp.oninput = function () {
+    inp.oninput = function (e) {
+      // 스페이스 두 번 -> '수업' (휴대폰이 바꿔 넣는 '. ' 도 같은 것으로 봄)
+      if (!(e && e.isComposing) && /(\s\s|[.。]\s)$/.test(inp.value)) {
+        var base = inp.value.replace(/(\s\s|[.。]\s)$/, "").trim();
+        inp.value = base && base.indexOf("수업") === -1 ? base + " 수업" : (base || "수업");
+        try { inp.setSelectionRange(inp.value.length, inp.value.length); } catch (er) {}
+      }
       state.inlineValue = inp.value;
       var nm = (inp.value || "");
       document.querySelectorAll(".cell.preview").forEach(function (pc) {
