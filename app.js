@@ -99,10 +99,6 @@
     hd.appendChild(l);
 
     var tools = el("div", "tools");
-    if (state.isAdmin && !state.editing) {
-      tools.appendChild(el("span", "admin-tag", "관리자"));
-      tools.appendChild(btn("btn primary", "예약 편집", startEdit));
-    }
     hd.appendChild(tools);
     root.appendChild(hd);
 
