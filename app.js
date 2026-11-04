@@ -18,7 +18,7 @@
     session: null, isAdmin: false, live: false,
     editing: false, draft: null, sel: {}, busy: false, status: "",
     showLogin: false, loginMsg: "", who: "",
-    queued: null, inline: null, inlineBusy: false, flash: ""
+    queued: null, range: null, inline: null, inlineBusy: false, flash: ""
   };
   var channel = null;
 
@@ -139,7 +139,7 @@
     root.appendChild(sh);
 
     root.appendChild(el("p", "note", state.isAdmin
-      ? "칸을 누르고 바로 입력하세요. +30분을 누르면 아래 칸까지 같은 이름으로 늘어나요. Enter로 저장, Esc로 취소, ↑↓·Tab으로 옆 칸 이동, 비우고 Enter를 누르면 지워집니다. 여러 칸을 한 번에 바꾸려면 예약 편집을 쓰세요. 날짜가 바뀌면 표는 자동으로 비워집니다."
+      ? "칸을 누르고 바로 입력하세요. 마우스로 드래그해 여러 칸을 고른 뒤 Delete 키를 누르면 한 번에 지워져요. +30분을 누르면 아래 칸까지 같은 이름으로 늘어나요. Enter로 저장, Esc로 취소, ↑↓·Tab으로 옆 칸 이동, 비우고 Enter를 누르면 지워집니다. 여러 칸을 한 번에 바꾸려면 예약 편집을 쓰세요. 날짜가 바뀌면 표는 자동으로 비워집니다."
       : "이 페이지는 보기 전용입니다. 예약은 관리자에게 문의해 주세요. 날짜가 바뀌면 표는 자동으로 비워집니다."));
 
     if (sb) root.appendChild(adminArea());
@@ -163,12 +163,119 @@
       c.onclick = function () { if (state.sel[key]) delete state.sel[key]; else state.sel[key] = 1; render(); };
     } else if (state.isAdmin) {
       c.classList.add("quick");
-      c.title = "눌러서 바로 입력";
-      c.onclick = function () { selectCell({ room: r.k, slot: i }); };
+      c.title = "눌러서 입력 · 드래그해서 여러 칸 선택";
+      c.dataset.room = r.k; c.dataset.slot = i;
+      if (inRange(r.k, i)) c.classList.add("rsel");
+      c.addEventListener("pointerdown", function (e) { dragStart(e, r.k, i); });
+      c.onclick = function (e) {
+        if (drag.suppress) { drag.suppress = false; return; }
+        if (e.shiftKey && state.range) { extendRange(r.k, i); return; }
+        clearRange(true);
+        selectCell({ room: r.k, slot: i });
+      };
     } else {
       c.tabIndex = -1;
     }
     return c;
+  }
+
+  // ---------- drag select & delete (admin, mouse) ----------
+  var drag = { on: false, moved: false, suppress: false, anchor: null };
+  function roomIdx(k) { return k === "band" ? 0 : 1; }
+  function inRange(k, i) {
+    var g = state.range; if (!g) return false;
+    var ri = roomIdx(k);
+    return ri >= g.r0 && ri <= g.r1 && i >= g.s0 && i <= g.s1;
+  }
+  function setRange(a, b) {
+    var ra = roomIdx(a.room), rb = roomIdx(b.room);
+    state.range = { r0: Math.min(ra, rb), r1: Math.max(ra, rb), s0: Math.min(a.slot, b.slot), s1: Math.max(a.slot, b.slot), anchor: a };
+    paintRange();
+  }
+  function extendRange(k, i) { setRange(state.range.anchor, { room: k, slot: i }); }
+  function paintRange() {
+    document.querySelectorAll(".cell.quick").forEach(function (c) {
+      c.classList.toggle("rsel", inRange(c.dataset.room, +c.dataset.slot));
+    });
+  }
+  function clearRange(silent) {
+    if (!state.range) return;
+    state.range = null;
+    if (!silent) paintRange();
+  }
+  function dragStart(e, k, i) {
+    if (e.pointerType !== "mouse" || e.button !== 0 || e.shiftKey) return;
+    drag.on = true; drag.moved = false; drag.anchor = { room: k, slot: i };
+  }
+  document.addEventListener("pointermove", function (e) {
+    if (!drag.on) return;
+    var t = document.elementFromPoint(e.clientX, e.clientY);
+    var c = t && t.closest ? t.closest(".cell.quick") : null;
+    if (!c) return;
+    var tgt = { room: c.dataset.room, slot: +c.dataset.slot };
+    if (!drag.moved && tgt.room === drag.anchor.room && tgt.slot === drag.anchor.slot) return;
+    if (!drag.moved) {
+      drag.moved = true;
+      if (state.inline) { var inp = document.getElementById("inline-input"); if (inp) inp.blur(); }
+    }
+    setRange(drag.anchor, tgt);
+  });
+  document.addEventListener("pointerup", function () {
+    if (!drag.on) return;
+    drag.on = false;
+    if (drag.moved) {
+      drag.suppress = true; // 드래그 끝의 click 은 입력창을 열지 않음
+      setTimeout(function () { drag.suppress = false; }, 0);
+      toast(rangeCount() + "칸 선택 · Delete 키로 지우기");
+    }
+  });
+  document.addEventListener("pointerdown", function (e) {
+    if (state.range && !(e.target.closest && (e.target.closest(".cell.quick") || e.target.closest(".toast")))) clearRange();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (!state.range || state.inline || state.editing) return;
+    var a = document.activeElement;
+    if (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA")) return;
+    if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); deleteRange(); }
+    else if (e.key === "Escape") { clearRange(); }
+  });
+  function rangeCount() { var g = state.range; return g ? (g.r1 - g.r0 + 1) * (g.s1 - g.s0 + 1) : 0; }
+  function deleteRange() {
+    var g = state.range; if (!g || !sb) return;
+    var day = kst().date;
+    if (state.day !== day) { state.rooms = emptyRooms(); state.day = day; }
+    var removed = []; // {room, slot, name}
+    for (var ri = g.r0; ri <= g.r1; ri++) {
+      var k = ROOMS[ri].k;
+      for (var i = g.s0; i <= g.s1; i++) if (state.rooms[k][i]) removed.push({ room: k, slot: i, name: state.rooms[k][i] });
+    }
+    state.range = null;
+    if (!removed.length) { paintRange(); toast("지울 예약이 없어요"); return; }
+    removed.forEach(function (x) { delete state.rooms[x.room][x.slot]; });
+    render();
+    var jobs = ROOMS.map(function (r) {
+      var slots = removed.filter(function (x) { return x.room === r.k; }).map(function (x) { return x.slot; });
+      return slots.length ? sb.from("reservations").delete().eq("day", day).eq("room", r.k).in("slot", slots) : null;
+    }).filter(Boolean);
+    Promise.all(jobs).then(function (res) {
+      var err = res.filter(function (x) { return x.error; })[0];
+      if (err) {
+        removed.forEach(function (x) { state.rooms[x.room][x.slot] = x.name; });
+        render();
+        toast(/row-level security|permission/i.test(err.error.message) ? "지울 권한이 없어요. 관리자로 로그인했는지 확인해 주세요." : "지우지 못했어요. 잠시 후 다시 시도해 주세요.");
+        return;
+      }
+      toast(removed.length + "칸 지웠어요", "되돌리기", function () {
+        var now = new Date().toISOString();
+        removed.forEach(function (x) { state.rooms[x.room][x.slot] = x.name; });
+        render();
+        sb.from("reservations").upsert(removed.map(function (x) { return { day: day, room: x.room, slot: x.slot, name: x.name, updated_at: now }; }))
+          .then(function (r2) { if (r2.error) { toast("되돌리지 못했어요."); load(); } });
+      });
+    }, function () {
+      removed.forEach(function (x) { state.rooms[x.room][x.slot] = x.name; });
+      render(); toast("지우지 못했어요. 인터넷 연결을 확인해 주세요.");
+    });
   }
 
   // ---------- quick inline edit (admin: tap a cell and type) ----------
