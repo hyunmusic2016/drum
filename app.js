@@ -363,6 +363,15 @@
         return function () { if (!done && state.inline === cur) go({ room: cur.room, slot: cur.slot + (cur.span || 0) + 1 }); };
       if (e.key === "ArrowUp" && cur.slot > 0)
         return function () { if (!done && state.inline === cur) go({ room: cur.room, slot: cur.slot - 1 }); };
+      // ←→ : 글자 맨 앞/맨 끝(또는 전체 선택)일 때만 옆 방으로 이동, 아니면 커서 이동
+      if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && !e.shiftKey) {
+        var st = inp.selectionStart, en = inp.selectionEnd, len = inp.value.length;
+        var all = st === 0 && en === len;
+        var left = e.key === "ArrowLeft";
+        var edge = all || (st === en && (left ? st === 0 : st === len));
+        var target = left ? (cur.room === "drum" ? "band" : null) : (cur.room === "band" ? "drum" : null);
+        if (edge && target) return function () { if (!done && state.inline === cur) go({ room: target, slot: cur.slot }); };
+      }
       return null;
     }
     var pending = null;
@@ -410,7 +419,7 @@
     d.appendChild(acts);
     // 키보드 단축키 안내 (입력 중에만, 키보드가 있는 기기에서만 보임)
     var keys = el("div", "keyhint");
-    [["Enter", "30분"], [mod + "+Enter", "1시간"], ["Esc", "취소"], ["↑↓", "이동"]].forEach(function (p) {
+    [["Enter", "30분"], [mod + "+Enter", "1시간"], ["Esc", "취소"], ["↑↓←→", "이동"]].forEach(function (p) {
       var it = el("span", "kh"); it.appendChild(el("kbd", null, p[0])); it.appendChild(document.createTextNode(" " + p[1])); keys.appendChild(it);
     });
     d.appendChild(keys);
