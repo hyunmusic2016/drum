@@ -16,6 +16,12 @@ create table if not exists public.admins (
   email text primary key
 );
 
+-- 테이블 접근 권한 ('Automatically expose new tables'를 꺼 둔 경우에도 동작하도록)
+grant usage on schema public to anon, authenticated;
+grant select on public.reservations to anon, authenticated;
+grant insert, update, delete on public.reservations to authenticated;
+grant select on public.admins to authenticated;
+
 alter table public.reservations enable row level security;
 alter table public.admins enable row level security;
 
