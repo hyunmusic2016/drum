@@ -361,7 +361,7 @@
       else if (e.key === "Escape") { e.preventDefault(); done = true; closeInline(); }
       else if (e.key === "ArrowDown" && cur.slot + (cur.span || 0) < SLOTS - 1) { e.preventDefault(); go({ room: cur.room, slot: cur.slot + (cur.span || 0) + 1 }); }
       else if (e.key === "ArrowUp" && cur.slot > 0) { e.preventDefault(); go({ room: cur.room, slot: cur.slot - 1 }); }
-      else if (e.key === "Tab") { e.preventDefault(); go({ room: cur.room === "band" ? "drum" : "band", slot: cur.slot }); }
+      else if (e.key === "Tab") { e.preventDefault(); } // Tab 은 아무 동작 안 함
     };
     // 다른 칸을 누르면 blur 다음에 click 이 오므로 잠깐 기다렸다가 저장
     inp.onblur = function () {
@@ -389,7 +389,7 @@
     // 키보드 단축키 안내 (입력 중에만, 키보드가 있는 기기에서만 보임)
     var mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
     var keys = el("div", "keyhint" + (i >= SLOTS - 2 ? " up" : ""));
-    [["Enter", "30분"], [(mac ? "⌘" : "Ctrl") + "+Enter", "1시간"], ["Esc", "취소"], ["↑↓ Tab", "이동"]].forEach(function (p) {
+    [["Enter", "30분"], [(mac ? "⌘" : "Ctrl") + "+Enter", "1시간"], ["Esc", "취소"], ["↑↓", "이동"]].forEach(function (p) {
       var it = el("span", "kh"); it.appendChild(el("kbd", null, p[0])); it.appendChild(document.createTextNode(" " + p[1])); keys.appendChild(it);
     });
     d.appendChild(keys);
