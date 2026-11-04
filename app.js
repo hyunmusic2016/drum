@@ -389,7 +389,9 @@
       blurTimer = setTimeout(function () { blurTimer = null; commitInline(blurValue, null); }, 250);
     };
     d.appendChild(inp);
+    var mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent), mod = mac ? "⌘" : "Ctrl";
     var ok = el("button", "ok-btn", "확인"); ok.type = "button"; ok.tabIndex = -1;
+    ok.dataset.tip = "Enter · 30분 저장";
     ok.addEventListener("mousedown", function (e) { e.preventDefault(); }); // 입력창 포커스 유지
     ok.onclick = function (e) {
       e.preventDefault();
@@ -400,15 +402,15 @@
     var acts = el("div", "acts" + (i >= SLOTS - 2 ? " up" : ""));
     acts.appendChild(ok);
     var eb = el("button", "ext-btn", "+30분"); eb.type = "button"; eb.tabIndex = -1;
+    eb.dataset.tip = mod + "+Enter · 1시간 바로 저장";
     eb.setAttribute("aria-label", "30분 더 예약");
     eb.addEventListener("mousedown", function (e) { e.preventDefault(); }); // 입력창 포커스 유지
     eb.onclick = function (e) { e.preventDefault(); extendInline(); };
     acts.appendChild(eb);
     d.appendChild(acts);
     // 키보드 단축키 안내 (입력 중에만, 키보드가 있는 기기에서만 보임)
-    var mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
     var keys = el("div", "keyhint");
-    [["Enter", "30분"], [(mac ? "⌘" : "Ctrl") + "+Enter", "1시간"], ["Esc", "취소"], ["↑↓", "이동"]].forEach(function (p) {
+    [["Enter", "30분"], [mod + "+Enter", "1시간"], ["Space Space", "수업"], ["Esc", "취소"], ["↑↓", "이동"]].forEach(function (p) {
       var it = el("span", "kh"); it.appendChild(el("kbd", null, p[0])); it.appendChild(document.createTextNode(" " + p[1])); keys.appendChild(it);
     });
     d.appendChild(keys);
