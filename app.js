@@ -92,9 +92,6 @@
     l.appendChild(el("div", "eyebrow", "PRACTICE ROOM BOOKING"));
     l.appendChild(el("h1", null, "합주실 · 드럼연습실 예약"));
     var dt = el("div", "date");
-    var wd = ["일", "월", "화", "수", "목", "금", "토"][new Date(k.y, k.m - 1, k.d).getDay()];
-    dt.appendChild(el("b", null, k.m + "월 " + k.d + "일 (" + wd + ")"));
-    dt.appendChild(el("span", "chip", "매일 자정 초기화"));
     var lv = el("span", "chip live" + (state.live ? "" : " off"), state.live ? "실시간" : "자동 새로고침");
     lv.id = "livechip";
     if (sb) dt.appendChild(lv);
