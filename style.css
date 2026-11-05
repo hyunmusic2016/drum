@@ -52,12 +52,12 @@ button{font:inherit;color:inherit;cursor:pointer}
 .cell.b.on{background:var(--band-room);color:var(--band-room-ink)}
 .cell.d.on{background:var(--drum-room);color:var(--drum-room-ink)}
 .cell.on.lesson{background:var(--lesson);color:var(--lesson-ink)}
-.editing .cell{cursor:pointer}
+.editing .cell{cursor:default}
 .editing .cell:hover{box-shadow:inset 0 0 0 1px var(--muted)}
 .cell.sel{box-shadow:inset 0 0 0 3px var(--sel)!important}
 .cell.rsel{box-shadow:inset 0 0 0 2px var(--accent)!important;background-image:linear-gradient(color-mix(in srgb,var(--accent) 14%,transparent),color-mix(in srgb,var(--accent) 14%,transparent))}
 .cell{touch-action:manipulation;-webkit-user-select:none;user-select:none}
-.cell.quick{cursor:text}
+.cell.quick{cursor:default}
 .cell.quick:hover{box-shadow:inset 0 0 0 1px var(--muted)}
 .cell.inline{padding:3px;display:flex;align-items:center;gap:3px}
 .cell.inline input{width:100%;min-width:0;font:inherit;font-size:var(--name-size);font-weight:500;text-align:center;border:2px solid var(--accent);border-radius:6px;background:var(--paper);color:var(--ink);padding:2px 4px;height:36px;line-height:1}
@@ -117,7 +117,7 @@ input[type=email],input[type=password],.bar input{flex:1 1 180px;min-width:0;fon
 .daytab.on{background:var(--ink);border-color:var(--ink);color:var(--paper)}
 .daytab.on .dname,.daytab.on .dcount{color:var(--paper)}
 .daytab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.lessons-sheet .cell{cursor:pointer}
+.lessons-sheet .cell{cursor:default}
 .lessons-sheet .cell:hover{box-shadow:inset 0 0 0 1px var(--muted)}
 .admin-foot{margin-top:16px}
 a.btn{color:var(--ink);text-decoration:none;display:inline-block}
