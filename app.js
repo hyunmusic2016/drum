@@ -101,6 +101,7 @@
         document.documentElement.style.setProperty("--sheet-top", shw.offsetTop + "px");
       }
       document.documentElement.style.setProperty("--home-w", w + "px");
+      document.dispatchEvent(new Event("sheet-layout"));
     }
   }
   function renderInner() {

@@ -19,7 +19,8 @@
     session: null, isAdmin: false, checked: false,
     lessons: {},          // "weekday:room:slot" -> label
     loaded: false, day: kst().dow, busy: {}, loginMsg: "", pwMsg: "",
-    tab: location.hash === "#password" ? "password" : "lessons"
+    tab: location.hash === "#password" ? "password" : location.hash === "#content" ? "content" : "lessons",
+    content: null, contentSaved: null, contentSaving: false
   };
 
   function kst() {
@@ -118,11 +119,14 @@
   }
   // 저장 안 한 변경이 있으면 페이지를 떠날 때 확인
   window.addEventListener("beforeunload", function (e) {
-    if (state.isAdmin && state.saved && diff().n) { e.preventDefault(); e.returnValue = ""; }
+    if (state.isAdmin && ((state.saved && diff().n) || contentDirty())) { e.preventDefault(); e.returnValue = ""; }
   });
   // ⌘/Ctrl+S 로 저장
   document.addEventListener("keydown", function (e) {
-    if ((e.ctrlKey || e.metaKey) && e.code === "KeyS" && state.tab === "lessons" && state.isAdmin) { e.preventDefault(); saveEdits(); }
+    if ((e.ctrlKey || e.metaKey) && e.code === "KeyS" && state.isAdmin) {
+      if (state.tab === "lessons") { e.preventDefault(); saveEdits(); }
+      else if (state.tab === "content") { e.preventDefault(); saveContent(); }
+    }
   });
 
   // 오늘 요일을 바꾸면 오늘 예약표에도 바로 반영 (다른 예약이 있는 칸은 건드리지 않음)
@@ -200,7 +204,7 @@
 
     // 메뉴 탭: 정기 수업 / 비밀번호 변경
     var menu = el("div", "menutabs"); menu.setAttribute("role", "tablist");
-    [["lessons", "정기 수업"], ["password", "비밀번호 변경"]].forEach(function (m) {
+    [["lessons", "정기 수업"], ["content", "안내 문구"], ["password", "비밀번호 변경"]].forEach(function (m) {
       var b = el("button", "menutab" + (state.tab === m[0] ? " on" : ""), m[1]);
       b.type = "button"; b.setAttribute("role", "tab"); b.setAttribute("aria-selected", state.tab === m[0] ? "true" : "false");
       b.onclick = function () { state.tab = m[0]; try { history.replaceState(null, "", "#" + m[0]); } catch (er) {} render(); };
@@ -213,6 +217,7 @@
     menu.appendChild(tc);
     root.appendChild(menu);
     if (state.tab === "password") { root.appendChild(passwordForm()); return; }
+    if (state.tab === "content") { root.appendChild(contentForm()); return; }
 
     // 저장 / 취소
     var df = diff();
@@ -270,6 +275,103 @@
     })(i);
     root.appendChild(sh);
     root.appendChild(el("p", "memo", "나중에 출석부가 새로 만들어지면 출석부 드럼 시간이랑 자동연동하기"));
+  }
+
+  // ---------- 안내 문구 (예약표 오른쪽 칸) ----------
+  var SC = window.SiteContent;
+  function loadContent() {
+    return sb.from("site_content").select("key,value").then(function (res) {
+      var c = Object.assign({}, SC.DEFAULTS);
+      if (res.error) toast("안내 문구를 불러오지 못했어요. site_content.sql을 실행했는지 확인해 주세요.");
+      else (res.data || []).forEach(function (r) { if (r.key in c) c[r.key] = r.value; });
+      state.content = c; state.contentSaved = Object.assign({}, c);
+      render();
+    });
+  }
+  function contentDirty() {
+    if (!state.content) return false;
+    return SC.KEYS.some(function (k) { return state.content[k] !== state.contentSaved[k]; });
+  }
+  function contentForm() {
+    var wrap = el("div", "content-edit");
+    if (!state.content) { wrap.appendChild(el("p", "note", "불러오는 중…")); if (!state.contentLoading) { state.contentLoading = true; loadContent().then(function () { state.contentLoading = false; }); } return wrap; }
+    var c = state.content;
+    var form = el("div", "cform"), pv = el("aside", "info cpreview");
+    function refreshPreview() { pv.innerHTML = SC.render(c); SC.drawQr(pv); bar(); }
+    function field(titleKey, bodyKey, rows) {
+      var box = el("div", "cfield");
+      if (titleKey) {
+        var ti = el("input", "ctitle"); ti.type = "text"; ti.value = c[titleKey]; ti.setAttribute("aria-label", "제목");
+        ti.oninput = function () { c[titleKey] = ti.value; refreshPreview(); };
+        box.appendChild(ti);
+      } else box.appendChild(el("div", "clabel", "QR 아래 문구"));
+      var ta = el("textarea", "cbody"); ta.rows = rows; ta.value = c[bodyKey]; ta.setAttribute("aria-label", (titleKey ? c[titleKey] : "QR") + " 내용");
+      ta.oninput = function () { c[bodyKey] = ta.value; refreshPreview(); };
+      box.appendChild(ta);
+      return box;
+    }
+    form.appendChild(field("usage_title", "usage", 10));
+    form.appendChild(field("caution_title", "caution", 5));
+    form.appendChild(field("howto_title", "howto", 8));
+
+    // QR 이미지
+    var qb = el("div", "cfield");
+    qb.appendChild(el("div", "clabel", "QR코드 이미지"));
+    var qrow = el("div", "qrow");
+    var file = el("input"); file.type = "file"; file.accept = "image/*"; file.id = "qr-file"; file.hidden = true;
+    var up = el("button", "btn", "이미지 올리기"); up.type = "button"; up.onclick = function () { file.click(); };
+    var reset = el("button", "btn", "자동 QR로"); reset.type = "button"; reset.disabled = !c.qr_image;
+    reset.onclick = function () { c.qr_image = ""; render(); };
+    file.onchange = function () {
+      var f = file.files && file.files[0]; if (!f) return;
+      if (!/^image\//.test(f.type)) { toast("이미지 파일만 올릴 수 있어요."); return; }
+      if (f.size > 3 * 1024 * 1024) { toast("3MB 이하 이미지만 올릴 수 있어요."); return; }
+      up.disabled = true; up.textContent = "올리는 중…";
+      var ext = (f.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
+      var path = "qr-" + Date.now() + "." + ext;
+      sb.storage.from("site").upload(path, f, { contentType: f.type, upsert: true }).then(function (res) {
+        if (res.error) { up.disabled = false; up.textContent = "이미지 올리기"; toast("올리지 못했어요: " + res.error.message); return; }
+        c.qr_image = sb.storage.from("site").getPublicUrl(path).data.publicUrl;
+        render();
+      }, function () { up.disabled = false; up.textContent = "이미지 올리기"; toast("올리지 못했어요. 인터넷 연결을 확인해 주세요."); });
+    };
+    qrow.appendChild(up); qrow.appendChild(reset); qrow.appendChild(file);
+    qrow.appendChild(el("span", "qstate", c.qr_image ? "올린 이미지 사용 중" : "자동 QR 사용 중"));
+    qb.appendChild(qrow);
+    form.appendChild(qb);
+    form.appendChild(field(null, "qr_text", 7));
+    form.appendChild(el("p", "chint", "빈 줄 = 항목 나누기 · **글자** = 굵게 · 줄 맨 앞 ! = 빨간 글씨 · {주소} = 이 페이지 주소"));
+
+    // 저장 / 취소
+    var acts = el("div", "lesson-acts");
+    function bar() {
+      acts.textContent = "";
+      var dirty = contentDirty();
+      if (dirty) acts.appendChild(el("span", "dirty", "저장 안 됨"));
+      var cb = el("button", "btn", "취소"); cb.type = "button"; cb.disabled = !dirty || state.contentSaving;
+      cb.onclick = function () { state.content = Object.assign({}, state.contentSaved); render(); };
+      var sv = el("button", "btn save-btn", state.contentSaving ? "저장 중…" : "저장"); sv.type = "button";
+      sv.disabled = !dirty || state.contentSaving; sv.onclick = saveContent;
+      acts.appendChild(cb); acts.appendChild(sv);
+    }
+    wrap.appendChild(acts);
+    var cols = el("div", "ccols"); cols.appendChild(form); cols.appendChild(pv);
+    wrap.appendChild(cols);
+    refreshPreview();
+    return wrap;
+  }
+  function saveContent() {
+    if (!contentDirty() || state.contentSaving) return;
+    state.contentSaving = true; render();
+    var now = new Date().toISOString();
+    var rows = SC.KEYS.filter(function (k) { return state.content[k] !== state.contentSaved[k]; })
+      .map(function (k) { return { key: k, value: state.content[k], updated_at: now }; });
+    sb.from("site_content").upsert(rows).then(function (res) {
+      state.contentSaving = false;
+      if (res.error) { render(); toast(/row-level security|permission/i.test(res.error.message) ? "저장 권한이 없어요." : "저장하지 못했어요: " + res.error.message); return; }
+      state.contentSaved = Object.assign({}, state.content);
+      render(); toast("저장했어요");
+    }, function () { state.contentSaving = false; render(); toast("저장하지 못했어요. 인터넷 연결을 확인해 주세요."); });
   }
 
   function passwordForm() {

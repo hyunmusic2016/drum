@@ -171,28 +171,37 @@ body:has(.wrap.home) .foot{max-width:calc(var(--home-w, 760px) + 32px)}
 /* 홈: 예약표 + 오른쪽 안내 칸 */
 .page{display:flex;justify-content:center;align-items:flex-start;gap:28px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .page > .wrap.home{margin:0;padding-left:0;padding-right:0;max-width:none}
-.info{width:320px;flex:none;display:flex;flex-direction:column;gap:12px;padding-top:calc(var(--sheet-top, 100px) + 0px);padding-bottom:24px}
-.info-box{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
-.info-box h2{margin:0 0 10px;font-size:16px;font-weight:700;text-align:center;padding-bottom:10px;border-bottom:1px solid var(--line)}
-.info-box ul,.info-box ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;font-size:14px;line-height:1.5}
-.info-box ul li{padding-left:12px;position:relative}
-.info-box ul li::before{content:"·";position:absolute;left:0}
+.info{--info-fs:14px;width:360px;flex:none;box-sizing:content-box;display:flex;flex-direction:column;gap:10px;margin-top:var(--sheet-top, 100px);margin-bottom:24px}
+.info.fitted{justify-content:space-between;overflow:hidden}
+.info-box{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:calc(var(--info-fs)*.85) 16px;font-size:var(--info-fs);line-height:1.5}
+.info-box h2{margin:0 0 calc(var(--info-fs)*.6);font-size:calc(var(--info-fs) + 2px);font-weight:700;text-align:center;padding-bottom:calc(var(--info-fs)*.6);border-bottom:1px solid var(--line)}
+.info-box ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:calc(var(--info-fs)*.5)}
+.info-box .usage li{padding-left:12px;position:relative}
+.info-box .usage li::before{content:"·";position:absolute;left:0}
 .info-box .warn{color:var(--warn);font-weight:700}
-.info-box .caution{gap:14px;text-align:center}
-.info-box .caution li{padding-left:0;color:var(--warn);font-weight:700;font-size:15px}
+.info-box .caution{gap:calc(var(--info-fs)*.9);text-align:center}
+.info-box .caution li{color:var(--warn);font-weight:700;font-size:calc(var(--info-fs) + 1px)}
 .info-box .caution li::before{content:"· "}
-.info-box .caution li span{font-weight:700}
-.info-box .caution li::before{position:static}
-.howto li .num{margin-right:4px}
-.howto li p{margin:6px 0 0}
-.howto .strong{font-weight:700}
-.qr-box{text-align:center;font-size:14px;line-height:1.5}
-.qr-box p{margin:8px 0 0}
-.qr-box .muted{color:var(--muted);font-size:13px}
-.qr{display:flex;justify-content:center;padding:4px}
-.qr img,.qr canvas{width:180px;height:180px;image-rendering:pixelated;background:#fff;padding:8px;border-radius:6px}
-.qr-box a{color:var(--band-room-ink);word-break:break-all}
+.info-box a{color:var(--band-room-ink);word-break:break-all}
+.qr-box{text-align:center}
+.qr-box p{margin:calc(var(--info-fs)*.5) 0 0}
+.qr{display:flex;justify-content:center}
+.qr img,.qr canvas,.qr-img{width:calc(var(--info-fs)*10);height:calc(var(--info-fs)*10);object-fit:contain;background:#fff;padding:6px;border-radius:6px;display:block;margin:0 auto}
+.qr img,.qr canvas{image-rendering:pixelated}
 @media (max-width:900px){
   .page{flex-direction:column;align-items:center;gap:0}
-  .info{width:100%;max-width:560px;padding-top:0}
+  .info{width:100%;max-width:560px;margin-top:0;height:auto!important}
 }
+/* admin: 안내 문구 */
+.ccols{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:20px;align-items:start}
+.cform{display:flex;flex-direction:column;gap:14px;min-width:0}
+.cfield{display:flex;flex-direction:column;gap:6px}
+.ctitle{font:inherit;font-size:15px;font-weight:700;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink)}
+.cbody{font:inherit;font-size:14px;line-height:1.5;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);resize:vertical;min-width:0}
+.ctitle:focus,.cbody:focus{outline:2px solid var(--band-line);outline-offset:0}
+.clabel{font-size:14px;font-weight:700}
+.qrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.qstate{font-size:13px;color:var(--muted)}
+.chint{margin:0;font-size:12px;color:var(--muted)}
+.cpreview{width:auto;margin:0;position:sticky;top:16px}
+@media (max-width:760px){.ccols{grid-template-columns:1fr}.cpreview{position:static}}
