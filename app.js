@@ -377,11 +377,17 @@
     render(); focusInline(true);
   }
   function inlineCell(r, i, v, hour) {
-    var d = el("div", "cell " + r.c + " inline" + (hour ? " hour" : ""));
+    // 엑셀처럼: select = 칸만 선택(커서 안 보임, 치면 내용 교체) / type = 치는 중 / edit = 커서 깜빡이며 고치기
+    var mode = state.inlineMode || "select";
+    var d = el("div", "cell " + r.c + " inline" + (hour ? " hour" : "") + (KB && mode === "select" ? " selmode" : ""));
     var inp = el("input");
+    function setMode(m) { mode = state.inlineMode = m; d.classList.toggle("selmode", KB && m === "select"); }
+    // 선택된 칸을 한 번 더 클릭하면 커서가 나타나 그 자리부터 고치기
+    inp.addEventListener("mousedown", function () { if (mode === "select") setMode("edit"); });
     if (state.inlineValue == null) { state.inlineValue = v; state.inlineOrig = v; }
     inp.id = "inline-input"; inp.maxLength = 20; inp.value = state.inlineValue; inp.disabled = state.inlineBusy;
     inp.oninput = function (e) {
+      if (mode === "select") setMode("type");
       // 스페이스 두 번 -> '수업' (휴대폰이 바꿔 넣는 '. ' 도 같은 것으로 봄)
       if (!(e && e.isComposing) && /(\s\s|[.。]\s)$/.test(inp.value)) {
         var base = inp.value.replace(/(\s\s|[.。]\s)$/, "").trim();
@@ -416,14 +422,11 @@
         return function () { if (!done && state.inline === cur) go({ room: cur.room, slot: cur.slot + (cur.span || 0) + 1 }); };
       if (e.key === "ArrowUp" && cur.slot > 0)
         return function () { if (!done && state.inline === cur) go({ room: cur.room, slot: cur.slot - 1 }); };
-      // ←→ : 글자 맨 앞/맨 끝(또는 전체 선택)일 때만 옆 방으로 이동, 아니면 커서 이동
-      if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && !e.shiftKey) {
-        var st = inp.selectionStart, en = inp.selectionEnd, len = inp.value.length;
-        var all = st === 0 && en === len;
-        var left = e.key === "ArrowLeft";
-        var edge = all || (st === en && (left ? st === 0 : st === len));
-        var target = left ? (cur.room === "drum" ? "band" : null) : (cur.room === "band" ? "drum" : null);
-        if (edge && target) return function () { if (!done && state.inline === cur) go({ room: target, slot: cur.slot }); };
+      // ←→ : 칸 선택·타이핑 중엔 옆 방으로 이동, 커서로 고치는 중(edit)엔 커서만 이동
+      if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && !e.shiftKey && mode !== "edit") {
+        var target = e.key === "ArrowLeft" ? (cur.room === "drum" ? "band" : null) : (cur.room === "band" ? "drum" : null);
+        if (target) return function () { if (!done && state.inline === cur) go({ room: target, slot: cur.slot }); };
+        return function () {};
       }
       return null;
     }
@@ -439,12 +442,15 @@
       var untouched = inp.value === (state.inlineOrig || "") && !(cur && cur.span > 0);
       if (e.key === "Escape") {
         e.preventDefault(); pending = null;
-        if (!untouched) { // 고치던 내용만 되돌리고 칸은 그대로
-          cur.span = 0; state.inlineValue = null; render(); focusInline(); return;
+        if (!untouched || mode !== "select") { // 고치던 내용만 되돌리고 칸 선택 상태로
+          cur.span = 0; state.inlineValue = null; state.inlineMode = "select"; render(); focusInline(); return;
         }
         done = true; closeInline(); return;
       }
-      if (!e.isComposing && untouched && cur) {
+      if (e.key === "F2" && mode === "select") { // F2: 커서 켜고 고치기
+        e.preventDefault(); setMode("edit"); var n = inp.value.length; try { inp.setSelectionRange(n, n); } catch (er) {} return;
+      }
+      if (!e.isComposing && untouched && cur && mode === "select") {
         var allSel = inp.selectionStart === 0 && inp.selectionEnd === inp.value.length;
         if ((e.key === "Delete" || e.key === "Backspace") && allSel && inp.value) { // 칸 비우기
           e.preventDefault(); done = true; commitInline("", { room: cur.room, slot: cur.slot }); return;
@@ -524,7 +530,7 @@
     if (state.inlineBusy || blurTimer) { selectCell(target); return; }
     var day = kst().date, rooms = state.day === day ? state.rooms : emptyRooms();
     state.inline = { room: target.room, slot: target.slot, span: 0 }; state.flash = "";
-    state.inlineOrig = rooms[target.room][target.slot] || ""; state.inlineValue = "";
+    state.inlineOrig = rooms[target.room][target.slot] || ""; state.inlineValue = ""; state.inlineMode = "type";
     state.inlineMsg = ""; state.lastCell = { room: target.room, slot: target.slot };
     render();
     var inp = document.getElementById("inline-input");
@@ -535,6 +541,7 @@
     if (blurTimer) { clearTimeout(blurTimer); blurTimer = null; commitInline(blurValue, target); return; }
     state.inline = { room: target.room, slot: target.slot, span: 0 }; state.flash = "";
     state.inlineValue = null; state.inlineMsg = ""; state.lastCell = { room: target.room, slot: target.slot };
+    state.inlineMode = "select";
     render(); focusInline(); // 같은 탭 안에서 바로 포커스해야 휴대폰 키보드가 열림
   }
   function closeInline() {
@@ -550,7 +557,7 @@
     next = next || q;
     state.inline = next ? { room: next.room, slot: next.slot, span: 0 } : null;
     state.inlineValue = null; state.inlineMsg = "";
-    if (next) state.lastCell = { room: next.room, slot: next.slot };
+    if (next) { state.lastCell = { room: next.room, slot: next.slot }; state.inlineMode = "select"; }
     render();
     if (next) focusInline(); else focusCell(cur);
   }
