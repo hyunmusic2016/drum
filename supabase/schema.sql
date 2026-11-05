@@ -61,7 +61,7 @@ exception when duplicate_object then null; end $$;
 -- select cron.schedule('clear-old-reservations', '5 15 * * *',
 --   $$ delete from public.reservations where day < (now() at time zone 'Asia/Seoul')::date $$);
 
--- 정기 수업 기능은 supabase/lessons.sql 도 이어서 실행하세요.
+-- 정기 수업 기능은 supabase/lessons.sql, supabase/lessons_30min.sql 도 순서대로 이어서 실행하세요.
 
 -- ▼ 관리자 이메일로 바꿔서 실행
 insert into public.admins (email) values ('관리자이메일@example.com')

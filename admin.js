@@ -5,7 +5,8 @@
     { k: "band", n: "합주실", c: "b" },
     { k: "drum", n: "드럼연습실", c: "d" }
   ];
-  var HOURS = [13, 14, 15, 16, 17, 18, 19, 20, 21];   // 수업 시작 시각 (1시간 수업)
+  var SLOTS = 18, START = 13 * 60;                     // 30분 칸: 0 = 1:00~1:30 ... 17 = 9:30~10:00 (예약표와 같음)
+  var KB = window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
   var DAYS = [1, 2, 3, 4, 5, 6, 0];                    // 월 ~ 일
   var DAY_NAME = ["일", "월", "화", "수", "목", "금", "토"];
   var LABEL = "수업";
@@ -16,7 +17,7 @@
 
   var state = {
     session: null, isAdmin: false, checked: false,
-    lessons: {},          // "weekday:room:hour" -> label
+    lessons: {},          // "weekday:room:slot" -> label
     loaded: false, day: kst().dow, busy: {}, loginMsg: "", pwMsg: "",
     tab: location.hash === "#password" ? "password" : "lessons"
   };
@@ -37,7 +38,11 @@
     return e;
   }
   function key(d, r, h) { return d + ":" + r + ":" + h; }
-  function hourLabel(h) { function f(x) { return (x % 12 || 12) + ":00"; } return f(h) + "~" + f(h + 1); }
+  function slotLabel(i) {
+    var s = START + i * 30, e = s + 30;
+    function f(t) { var h = Math.floor(t / 60) % 12 || 12; return h + ":" + (t % 60 ? "30" : "00"); }
+    return f(s) + "~" + f(e);
+  }
 
   var toastTimer = null;
   function toast(msg) {
@@ -57,53 +62,87 @@
     });
   }
   function loadLessons() {
-    return sb.from("lessons").select("weekday,room,hour,label").then(function (res) {
-      if (res.error) { toast("수업 시간표를 불러오지 못했어요. lessons.sql을 실행했는지 확인해 주세요."); return; }
+    return sb.from("lesson_slots").select("weekday,room,slot,label").then(function (res) {
+      if (res.error) { toast("수업 시간표를 불러오지 못했어요. lessons_30min.sql을 실행했는지 확인해 주세요."); return; }
       var m = {};
-      (res.data || []).forEach(function (l) { m[key(l.weekday, l.room, l.hour)] = l.label; });
+      (res.data || []).forEach(function (l) { m[key(l.weekday, l.room, l.slot)] = l.label; });
       state.lessons = m; state.loaded = true;
       render();
     });
   }
 
-  function toggle(d, r, h) {
-    var k = key(d, r, h);
-    if (state.busy[k]) return;
-    var on = !state.lessons[k];
-    state.busy[k] = true;
-    if (on) state.lessons[k] = LABEL; else delete state.lessons[k];
+  // 여러 칸을 한 번에 켜기/끄기 (cells: [{room, slot}], on: true=수업 넣기)
+  function setCells(d, cells, on) {
+    cells = cells.filter(function (c) { return !!state.lessons[key(d, c.room, c.slot)] !== on; });
+    if (!cells.length) return;
+    cells.forEach(function (c) { if (on) state.lessons[key(d, c.room, c.slot)] = LABEL; else delete state.lessons[key(d, c.room, c.slot)]; });
     render();
-    var q = on
-      ? sb.from("lessons").upsert([{ weekday: d, room: r, hour: h, label: LABEL }])
-      : sb.from("lessons").delete().match({ weekday: d, room: r, hour: h });
-    q.then(function (res) {
-      delete state.busy[k];
-      if (res.error) {
-        if (on) delete state.lessons[k]; else state.lessons[k] = LABEL;
-        render();
-        toast(/row-level security|permission/i.test(res.error.message) ? "저장 권한이 없어요." : "저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
+    var jobs = [];
+    if (on) jobs.push(sb.from("lesson_slots").upsert(cells.map(function (c) { return { weekday: d, room: c.room, slot: c.slot, label: LABEL }; })));
+    else ROOMS.forEach(function (r) {
+      var sl = cells.filter(function (c) { return c.room === r.k; }).map(function (c) { return c.slot; });
+      if (sl.length) jobs.push(sb.from("lesson_slots").delete().eq("weekday", d).eq("room", r.k).in("slot", sl));
+    });
+    function undoLocal() {
+      cells.forEach(function (c) { if (on) delete state.lessons[key(d, c.room, c.slot)]; else state.lessons[key(d, c.room, c.slot)] = LABEL; });
+      render();
+    }
+    Promise.all(jobs).then(function (res) {
+      var err = res.filter(function (x) { return x.error; })[0];
+      if (err) {
+        undoLocal();
+        toast(/row-level security|permission/i.test(err.error.message) ? "저장 권한이 없어요." : "저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
         return;
       }
-      render();
-      if (d === kst().dow) syncToday(r, h, on);
-    }, function () {
-      delete state.busy[k];
-      if (on) delete state.lessons[k]; else state.lessons[k] = LABEL;
-      render(); toast("저장하지 못했어요. 인터넷 연결을 확인해 주세요.");
-    });
+      if (d === kst().dow) syncToday(cells, on);
+    }, function () { undoLocal(); toast("저장하지 못했어요. 인터넷 연결을 확인해 주세요."); });
   }
 
   // 오늘 요일을 바꾸면 오늘 예약표에도 바로 반영 (다른 예약이 있는 칸은 건드리지 않음)
-  function syncToday(r, h, on) {
-    var day = kst().date, slots = [(h - 13) * 2, (h - 13) * 2 + 1];
+  function syncToday(cells, on) {
+    var day = kst().date;
     if (on) {
-      sb.from("reservations").upsert(slots.map(function (s) { return { day: day, room: r, slot: s, name: LABEL }; }),
+      sb.from("reservations").upsert(cells.map(function (c) { return { day: day, room: c.room, slot: c.slot, name: LABEL }; }),
         { onConflict: "day,room,slot", ignoreDuplicates: true }).then(function () {}, function () {});
-    } else {
-      sb.from("reservations").delete().eq("day", day).eq("room", r).eq("name", LABEL).in("slot", slots)
+    } else ROOMS.forEach(function (r) {
+      var sl = cells.filter(function (c) { return c.room === r.k; }).map(function (c) { return c.slot; });
+      if (sl.length) sb.from("reservations").delete().eq("day", day).eq("room", r.k).eq("name", LABEL).in("slot", sl)
         .then(function () {}, function () {});
-    }
+    });
   }
+
+  // ---------- 드래그로 칠하기 (마우스) ----------
+  // 누른 칸이 비어 있으면 '수업 넣기', 차 있으면 '지우기'. 끄는 동안 같은 방 칸들을 미리 표시하고 놓으면 저장
+  var paint = null;
+  function paintCells() {
+    if (!paint) return [];
+    var lo = Math.min(paint.from, paint.to), hi = Math.max(paint.from, paint.to), out = [];
+    for (var k = lo; k <= hi; k++) out.push({ room: paint.room, slot: k });
+    return out;
+  }
+  function paintPreview() {
+    document.querySelectorAll(".lessons-sheet .cell").forEach(function (c) { c.classList.remove("pv-on", "pv-off"); });
+    paintCells().forEach(function (c) {
+      var e = document.querySelector('.lessons-sheet .cell[data-room="' + c.room + '"][data-slot="' + c.slot + '"]');
+      if (e) e.classList.add(paint.on ? "pv-on" : "pv-off");
+    });
+  }
+  function slotAtY(y) {
+    var times = document.querySelectorAll(".lessons-sheet > .time");
+    for (var k = 0; k < times.length; k++) if (y < times[k].getBoundingClientRect().bottom) return k;
+    return times.length - 1;
+  }
+  document.addEventListener("pointermove", function (e) {
+    if (!paint) return;
+    var t = slotAtY(e.clientY);
+    if (t !== paint.to) { paint.to = t; paintPreview(); }
+  });
+  document.addEventListener("pointerup", function () {
+    if (!paint) return;
+    var p = paint, cells = paintCells(); paint = null;
+    document.body.classList.remove("filling");
+    setCells(p.day, cells, p.on);
+  });
 
   // ---------- render ----------
   function render() {
@@ -148,7 +187,7 @@
     var today = kst().dow;
     DAYS.forEach(function (d) {
       var n = 0;
-      ROOMS.forEach(function (r) { HOURS.forEach(function (h) { if (state.lessons[key(d, r.k, h)]) n++; }); });
+      ROOMS.forEach(function (r) { for (var q = 0; q < SLOTS; q++) if (state.lessons[key(d, r.k, q)]) n++; });
       var b = el("button", "daytab" + (d === state.day ? " on" : "") + (d === today ? " today" : ""));
       b.type = "button"; b.setAttribute("role", "tab"); b.setAttribute("aria-selected", d === state.day ? "true" : "false");
       b.appendChild(el("span", "dname", DAY_NAME[d]));
@@ -161,22 +200,32 @@
     var sh = el("div", "sheet lessons-sheet");
     sh.appendChild(el("div", "h t", DAY_NAME[state.day] + "요일"));
     ROOMS.forEach(function (r) { sh.appendChild(el("div", "h " + r.k, r.n)); });
-    HOURS.forEach(function (h, idx) {
-      var t = el("div", "time" + (idx % 2 ? " alt" : "") + (idx ? " hour" : ""));
-      t.appendChild(el("span", null, hourLabel(h)));
+    for (var i = 0; i < SLOTS; i++) (function (i) {
+      var hour = i > 0 && i % 2 === 0, alt = Math.floor(i / 2) % 2 === 1;
+      var t = el("div", "time" + (alt ? " alt" : "") + (hour ? " hour" : ""));
+      t.appendChild(el("span", null, slotLabel(i)));
       sh.appendChild(t);
       ROOMS.forEach(function (r) {
-        var k = key(state.day, r.k, h), v = state.lessons[k];
-        var c = el("button", "cell " + r.c + (idx ? " hour" : "") + (v ? " on lesson" : ""));
-        c.type = "button";
+        var v = state.lessons[key(state.day, r.k, i)];
+        var c = el("button", "cell " + r.c + (hour ? " hour" : "") + (v ? " on lesson" : ""));
+        c.type = "button"; c.dataset.room = r.k; c.dataset.slot = i;
         c.setAttribute("aria-pressed", v ? "true" : "false");
-        c.setAttribute("aria-label", DAY_NAME[state.day] + "요일 " + r.n + " " + hourLabel(h) + (v ? " 수업 있음" : " 비어 있음"));
+        c.setAttribute("aria-label", DAY_NAME[state.day] + "요일 " + r.n + " " + slotLabel(i) + (v ? " 수업 있음" : " 비어 있음"));
         if (v) c.appendChild(el("span", "nm", v));
-        if (state.busy[k]) c.disabled = true;
-        c.onclick = function () { toggle(state.day, r.k, h); };
+        if (KB) {
+          c.addEventListener("pointerdown", function (e) {
+            if (e.button !== 0) return;
+            e.preventDefault();
+            paint = { day: state.day, room: r.k, from: i, to: i, on: !v };
+            document.body.classList.add("filling");
+            paintPreview();
+          });
+        } else {
+          c.onclick = function () { setCells(state.day, [{ room: r.k, slot: i }], !v); };
+        }
         sh.appendChild(c);
       });
-    });
+    })(i);
     root.appendChild(sh);
   }
 

@@ -139,3 +139,6 @@ body.filling,body.filling *{cursor:crosshair!important;user-select:none}
 .pwform input{flex:none;font:inherit;font-size:16px;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink)}
 .pwform .btn{align-self:flex-start}
 .pwform p{margin:0;font-size:13px}
+.lessons-sheet .cell.pv-on{background:var(--lesson);color:var(--lesson-ink);outline:2px dashed var(--accent);outline-offset:-3px}
+.lessons-sheet .cell.pv-off{background:var(--paper)!important;color:var(--muted)!important;outline:2px dashed var(--muted);outline-offset:-3px}
+.lessons-sheet .cell.pv-off .nm{text-decoration:line-through}
