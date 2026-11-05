@@ -6,4 +6,4 @@
 - 수정할 때마다 버전을 올린다. `index.html`과 `admin.html`의 푸터 `vX.Y.Z`와 모든 `?v=` 쿼리를 함께 바꾸고 `CHANGELOG.md`에 기록한다.
   - 기능 추가·화면 변경: 가운데 자리, 오류·문구 수정: 끝자리, 구조 변경: 앞자리
 - 정적 사이트(GitHub Pages) + Supabase. 설정은 `config.js`, DB는 `supabase/schema.sql`(처음 설정), 이후 변경은 `supabase/*.sql` 파일로 추가.
-- 페이지: `index.html`+`app.js`(예약표, 관리자는 칸 바로 입력), `admin.html`+`admin.js`(정기 수업), 공통 스타일 `style.css`.
+- 페이지: `index.html`+`app.js`(예약표, 로그인 버튼 없음. admin.html에서 로그인한 관리자는 칸 바로 입력), `admin.html`+`admin.js`(정기 수업), 공통 스타일 `style.css`.
