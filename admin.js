@@ -277,79 +277,117 @@
     root.appendChild(el("p", "memo", "나중에 출석부가 새로 만들어지면 출석부 드럼 시간이랑 자동연동하기"));
   }
 
-  // ---------- 안내 문구 (예약표 오른쪽 칸) ----------
+  // ---------- 안내 문구 (예약표 오른쪽 칸): 상자 추가·삭제·숨김·순서·글씨 크기 ----------
   var SC = window.SiteContent;
+  function clone(x) { return JSON.parse(JSON.stringify(x)); }
   function loadContent() {
     return sb.from("site_content").select("key,value").then(function (res) {
-      var c = Object.assign({}, SC.DEFAULTS);
       if (res.error) toast("안내 문구를 불러오지 못했어요. site_content.sql을 실행했는지 확인해 주세요.");
-      else (res.data || []).forEach(function (r) { if (r.key in c) c[r.key] = r.value; });
-      state.content = c; state.contentSaved = Object.assign({}, c);
+      state.content = res.error ? SC.defaults() : SC.fromRows(res.data);
+      state.contentSaved = clone(state.content);
       render();
     });
   }
   function contentDirty() {
-    if (!state.content) return false;
-    return SC.KEYS.some(function (k) { return state.content[k] !== state.contentSaved[k]; });
+    return !!state.content && JSON.stringify(state.content) !== JSON.stringify(state.contentSaved);
   }
   function contentForm() {
     var wrap = el("div", "content-edit");
     if (!state.content) { wrap.appendChild(el("p", "note", "불러오는 중…")); if (!state.contentLoading) { state.contentLoading = true; loadContent().then(function () { state.contentLoading = false; }); } return wrap; }
-    var c = state.content;
+    var boxes = state.content;
     var form = el("div", "cform"), pv = el("aside", "info cpreview");
-    function refreshPreview() { pv.innerHTML = SC.render(c); SC.drawQr(pv); bar(); }
-    function field(titleKey, bodyKey, rows) {
-      var box = el("div", "cfield");
-      if (titleKey) {
-        var ti = el("input", "ctitle"); ti.type = "text"; ti.value = c[titleKey]; ti.setAttribute("aria-label", "제목");
-        ti.oninput = function () { c[titleKey] = ti.value; refreshPreview(); };
-        box.appendChild(ti);
-      } else box.appendChild(el("div", "clabel", "QR 아래 문구"));
-      var ta = el("textarea", "cbody"); ta.rows = rows; ta.value = c[bodyKey]; ta.setAttribute("aria-label", (titleKey ? c[titleKey] : "QR") + " 내용");
-      ta.oninput = function () { c[bodyKey] = ta.value; refreshPreview(); };
-      box.appendChild(ta);
-      return box;
-    }
-    form.appendChild(field("usage_title", "usage", 10));
-    form.appendChild(field("caution_title", "caution", 5));
-    form.appendChild(field("howto_title", "howto", 8));
+    var acts = el("div", "lesson-acts");
+    function refresh() { pv.innerHTML = SC.render(boxes); SC.drawQr(pv); bar(); }
+    function move(i, d) { var j = i + d; if (j < 0 || j >= boxes.length) return; var t = boxes[i]; boxes[i] = boxes[j]; boxes[j] = t; render(); }
 
-    // QR 이미지
-    var qb = el("div", "cfield");
-    qb.appendChild(el("div", "clabel", "QR코드 이미지"));
-    var qrow = el("div", "qrow");
-    var file = el("input"); file.type = "file"; file.accept = "image/*"; file.id = "qr-file"; file.hidden = true;
-    var up = el("button", "btn", "이미지 올리기"); up.type = "button"; up.onclick = function () { file.click(); };
-    var reset = el("button", "btn", "자동 QR로"); reset.type = "button"; reset.disabled = !c.qr_image;
-    reset.onclick = function () { c.qr_image = ""; render(); };
-    file.onchange = function () {
-      var f = file.files && file.files[0]; if (!f) return;
-      if (!/^image\//.test(f.type)) { toast("이미지 파일만 올릴 수 있어요."); return; }
-      if (f.size > 3 * 1024 * 1024) { toast("3MB 이하 이미지만 올릴 수 있어요."); return; }
-      up.disabled = true; up.textContent = "올리는 중…";
-      var ext = (f.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
-      var path = "qr-" + Date.now() + "." + ext;
-      sb.storage.from("site").upload(path, f, { contentType: f.type, upsert: true }).then(function (res) {
-        if (res.error) { up.disabled = false; up.textContent = "이미지 올리기"; toast("올리지 못했어요: " + res.error.message); return; }
-        c.qr_image = sb.storage.from("site").getPublicUrl(path).data.publicUrl;
-        render();
-      }, function () { up.disabled = false; up.textContent = "이미지 올리기"; toast("올리지 못했어요. 인터넷 연결을 확인해 주세요."); });
-    };
-    qrow.appendChild(up); qrow.appendChild(reset); qrow.appendChild(file);
-    qrow.appendChild(el("span", "qstate", c.qr_image ? "올린 이미지 사용 중" : "자동 QR 사용 중"));
-    qb.appendChild(qrow);
-    form.appendChild(qb);
-    form.appendChild(field(null, "qr_text", 7));
+    boxes.forEach(function (b, i) {
+      var card = el("div", "cbox" + (b.hidden ? " is-hidden" : ""));
+      // 위쪽 줄: 제목 / 순서 / 숨김 / 삭제
+      var top = el("div", "cbox-top");
+      var ti = el("input", "ctitle"); ti.type = "text"; ti.value = b.title || ""; ti.placeholder = b.type === "qr" ? "제목 (없으면 비워 두기)" : "제목";
+      ti.setAttribute("aria-label", "상자 제목"); ti.oninput = function () { b.title = ti.value; refresh(); };
+      top.appendChild(ti);
+      function ib(txt, label, fn, dis) { var x = el("button", "btn ib", txt); x.type = "button"; x.title = label; x.setAttribute("aria-label", label); x.disabled = !!dis; x.onclick = fn; return x; }
+      top.appendChild(ib("↑", "위로", function () { move(i, -1); }, i === 0));
+      top.appendChild(ib("↓", "아래로", function () { move(i, 1); }, i === boxes.length - 1));
+      top.appendChild(ib(b.hidden ? "보이기" : "숨기기", b.hidden ? "보이기" : "숨기기", function () { b.hidden = !b.hidden; render(); }));
+      var del = ib("삭제", "삭제", null);
+      del.classList.add("danger");
+      del.onclick = function () {
+        if (del.dataset.armed) { boxes.splice(i, 1); render(); return; }
+        del.dataset.armed = "1"; del.textContent = "삭제 확인"; del.setAttribute("aria-label", "삭제 확인");
+        setTimeout(function () { if (del.isConnected) { delete del.dataset.armed; del.textContent = "삭제"; del.setAttribute("aria-label", "삭제"); } }, 3000);
+      };
+      top.appendChild(del);
+      card.appendChild(top);
+
+      // 모양 / 글씨 크기
+      var opt = el("div", "cbox-opt");
+      if (b.type !== "qr") {
+        var sel = el("select", "csel"); sel.setAttribute("aria-label", "모양");
+        SC.STYLES.forEach(function (st) { var o = el("option", null, st[1]); o.value = st[0]; if (b.style === st[0]) o.selected = true; sel.appendChild(o); });
+        sel.onchange = function () { b.style = sel.value; refresh(); };
+        opt.appendChild(sel);
+      }
+      var szl = el("label", "csize"); szl.appendChild(document.createTextNode("글씨 "));
+      var rg = el("input"); rg.type = "range"; rg.min = 70; rg.max = 160; rg.step = 5; rg.value = b.scale || 100; rg.setAttribute("aria-label", "글씨 크기");
+      var rv = el("span", "cszv", (b.scale || 100) + "%");
+      rg.oninput = function () { b.scale = +rg.value; rv.textContent = rg.value + "%"; refresh(); };
+      szl.appendChild(rg); szl.appendChild(rv);
+      opt.appendChild(szl);
+      card.appendChild(opt);
+
+      // QR 이미지
+      if (b.type === "qr") {
+        var qrow = el("div", "qrow");
+        var file = el("input"); file.type = "file"; file.accept = "image/*"; file.hidden = true;
+        var up = el("button", "btn", "이미지 올리기"); up.type = "button"; up.onclick = function () { file.click(); };
+        var reset = el("button", "btn", "자동 QR로"); reset.type = "button"; reset.disabled = !b.image;
+        reset.onclick = function () { b.image = ""; render(); };
+        file.onchange = function () {
+          var f = file.files && file.files[0]; if (!f) return;
+          if (!/^image\//.test(f.type)) { toast("이미지 파일만 올릴 수 있어요."); return; }
+          if (f.size > 3 * 1024 * 1024) { toast("3MB 이하 이미지만 올릴 수 있어요."); return; }
+          up.disabled = true; up.textContent = "올리는 중…";
+          var ext = (f.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
+          var path = "qr-" + Date.now() + "." + ext;
+          sb.storage.from("site").upload(path, f, { contentType: f.type, upsert: true }).then(function (res) {
+            if (res.error) { up.disabled = false; up.textContent = "이미지 올리기"; toast("올리지 못했어요: " + res.error.message); return; }
+            b.image = sb.storage.from("site").getPublicUrl(path).data.publicUrl;
+            render();
+          }, function () { up.disabled = false; up.textContent = "이미지 올리기"; toast("올리지 못했어요. 인터넷 연결을 확인해 주세요."); });
+        };
+        qrow.appendChild(up); qrow.appendChild(reset); qrow.appendChild(file);
+        qrow.appendChild(el("span", "qstate", b.image ? "올린 이미지" : "자동 QR"));
+        card.appendChild(qrow);
+      }
+
+      var ta = el("textarea", "cbody"); ta.rows = Math.min(12, Math.max(4, (b.body || "").split("\n").length + 1));
+      ta.value = b.body || ""; ta.setAttribute("aria-label", (b.title || "상자") + " 내용");
+      ta.oninput = function () { b.body = ta.value; refresh(); };
+      card.appendChild(ta);
+      form.appendChild(card);
+    });
+
+    // 상자 추가
+    var addRow = el("div", "qrow");
+    var at = el("button", "btn", "+ 글 상자 추가"); at.type = "button";
+    at.onclick = function () { boxes.push(SC.newText()); render(); };
+    addRow.appendChild(at);
+    if (!boxes.some(function (b) { return b.type === "qr"; })) {
+      var aq = el("button", "btn", "+ QR 상자 추가"); aq.type = "button";
+      aq.onclick = function () { boxes.push(SC.newQr()); render(); };
+      addRow.appendChild(aq);
+    }
+    form.appendChild(addRow);
     form.appendChild(el("p", "chint", "빈 줄 = 항목 나누기 · **글자** = 굵게 · 줄 맨 앞 ! = 빨간 글씨 · {주소} = 이 페이지 주소"));
 
-    // 저장 / 취소
-    var acts = el("div", "lesson-acts");
     function bar() {
       acts.textContent = "";
       var dirty = contentDirty();
       if (dirty) acts.appendChild(el("span", "dirty", "저장 안 됨"));
       var cb = el("button", "btn", "취소"); cb.type = "button"; cb.disabled = !dirty || state.contentSaving;
-      cb.onclick = function () { state.content = Object.assign({}, state.contentSaved); render(); };
+      cb.onclick = function () { state.content = clone(state.contentSaved); render(); };
       var sv = el("button", "btn save-btn", state.contentSaving ? "저장 중…" : "저장"); sv.type = "button";
       sv.disabled = !dirty || state.contentSaving; sv.onclick = saveContent;
       acts.appendChild(cb); acts.appendChild(sv);
@@ -357,19 +395,16 @@
     wrap.appendChild(acts);
     var cols = el("div", "ccols"); cols.appendChild(form); cols.appendChild(pv);
     wrap.appendChild(cols);
-    refreshPreview();
+    refresh();
     return wrap;
   }
   function saveContent() {
     if (!contentDirty() || state.contentSaving) return;
     state.contentSaving = true; render();
-    var now = new Date().toISOString();
-    var rows = SC.KEYS.filter(function (k) { return state.content[k] !== state.contentSaved[k]; })
-      .map(function (k) { return { key: k, value: state.content[k], updated_at: now }; });
-    sb.from("site_content").upsert(rows).then(function (res) {
+    sb.from("site_content").upsert([{ key: "boxes", value: JSON.stringify(state.content), updated_at: new Date().toISOString() }]).then(function (res) {
       state.contentSaving = false;
       if (res.error) { render(); toast(/row-level security|permission/i.test(res.error.message) ? "저장 권한이 없어요." : "저장하지 못했어요: " + res.error.message); return; }
-      state.contentSaved = Object.assign({}, state.content);
+      state.contentSaved = clone(state.content);
       render(); toast("저장했어요");
     }, function () { state.contentSaving = false; render(); toast("저장하지 못했어요. 인터넷 연결을 확인해 주세요."); });
   }

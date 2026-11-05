@@ -2,13 +2,12 @@
   "use strict";
   var aside = document.getElementById("info");
   if (!aside || !window.SiteContent) return;
-  var SC = window.SiteContent, content = {};
+  var SC = window.SiteContent, boxes = SC.defaults();
 
   function paint() {
-    aside.innerHTML = SC.render(content);
+    aside.innerHTML = SC.render(boxes);
     SC.drawQr(aside);
-    var img = aside.querySelector(".qr-img");
-    if (img) img.addEventListener("load", fit);
+    aside.querySelectorAll(".qr-img").forEach(function (img) { img.addEventListener("load", fit); });
     fit();
   }
 
@@ -41,7 +40,7 @@
     var sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false, storageKey: "sb-info" } });
     sb.from("site_content").select("key,value").then(function (res) {
       if (res.error || !res.data) return;
-      res.data.forEach(function (r) { content[r.key] = r.value; });
+      boxes = SC.fromRows(res.data);
       paint();
     }, function () {});
   }
