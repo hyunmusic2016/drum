@@ -25,7 +25,7 @@ GitHub Pages(정적 호스팅) + Supabase(DB·로그인)로 동작합니다.
 ### 3. GitHub Pages 켜기
 저장소 **Settings > Pages**에서 Source를 `Deploy from a branch`, Branch를 `main` / `/ (root)`로 지정합니다.
 잠시 후 `https://<아이디>.github.io/<저장소이름>/` 주소가 생깁니다.
-개인 도메인: `CNAME` 파일(room.hyunmusic.com) + DNS에 CNAME `room` → `hyunmusic2016.github.io`.
+개인 도메인: `CNAME` 파일(drum.hyunmusic.com) + DNS에 CNAME `drum` → `hyunmusic2016.github.io`.
 
 ### 4. 로그인 링크가 돌아올 주소 등록
 Supabase **Authentication > URL Configuration**에서
