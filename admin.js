@@ -390,6 +390,8 @@
       cb.onclick = function () { state.content = clone(state.contentSaved); render(); };
       var sv = el("button", "btn save-btn", state.contentSaving ? "저장 중…" : "저장"); sv.type = "button";
       sv.disabled = !dirty || state.contentSaving; sv.onclick = saveContent;
+      var pvb = el("button", "btn", "홈 화면 미리보기"); pvb.type = "button"; pvb.onclick = openHomePreview;
+      acts.insertBefore(pvb, acts.firstChild);
       acts.appendChild(cb); acts.appendChild(sv);
     }
     wrap.appendChild(acts);
@@ -397,6 +399,38 @@
     wrap.appendChild(cols);
     refresh();
     return wrap;
+  }
+  // 실제 홈 화면에 저장 전 문구를 넣어 보여 주는 창
+  function openHomePreview() {
+    var draft = JSON.parse(JSON.stringify(state.content));
+    var ov = el("div", "pv-overlay"); ov.setAttribute("role", "dialog"); ov.setAttribute("aria-label", "홈 화면 미리보기");
+    var top = el("div", "pv-top");
+    top.appendChild(el("strong", null, "홈 화면 미리보기" + (contentDirty() ? " (저장 전)" : "")));
+    var seg = el("div", "pv-seg");
+    var frameWrap = el("div", "pv-frame");
+    var fr = el("iframe"); fr.src = "index.html?preview=1"; fr.title = "홈 화면 미리보기";
+    frameWrap.appendChild(fr);
+    [["pc", "컴퓨터"], ["mobile", "휴대폰"]].forEach(function (m, i) {
+      var b = el("button", "btn" + (i === 0 ? " on" : ""), m[1]); b.type = "button";
+      b.onclick = function () { seg.querySelectorAll(".btn").forEach(function (x) { x.classList.remove("on"); }); b.classList.add("on"); frameWrap.classList.toggle("mobile", m[0] === "mobile"); };
+      seg.appendChild(b);
+    });
+    top.appendChild(seg);
+    var close = el("button", "btn", "닫기"); close.type = "button";
+    // 미리보기 창이 준비되면 저장 전 문구를 보냄
+    function onMsg(e) {
+      if (e.source === fr.contentWindow && e.data && e.data.type === "preview-ready")
+        fr.contentWindow.postMessage({ type: "draftBoxes", boxes: draft }, "*");
+    }
+    window.addEventListener("message", onMsg);
+    function shut() { ov.remove(); document.removeEventListener("keydown", onKey); window.removeEventListener("message", onMsg); }
+    function onKey(e) { if (e.key === "Escape") shut(); }
+    close.onclick = shut;
+    document.addEventListener("keydown", onKey);
+    top.appendChild(close);
+    ov.appendChild(top); ov.appendChild(frameWrap);
+    document.body.appendChild(ov);
+    close.focus();
   }
   function saveContent() {
     if (!contentDirty() || state.contentSaving) return;

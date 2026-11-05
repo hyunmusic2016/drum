@@ -78,8 +78,9 @@
       });
   }
 
+  var PREVIEW = /[?&]preview=1/.test(location.search); // 관리자 미리보기 창: 보기 전용
   function checkAdmin() {
-    if (!sb || !state.session) { state.isAdmin = false; return Promise.resolve(); }
+    if (!sb || !state.session || PREVIEW) { state.isAdmin = false; return Promise.resolve(); }
     var email = state.session.user && state.session.user.email;
     return sb.from("admins").select("email").eq("email", email).maybeSingle().then(function (res) {
       state.isAdmin = !!(res.data && !res.error);

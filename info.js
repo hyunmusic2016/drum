@@ -35,6 +35,16 @@
 
   // 관리자가 고친 문구 불러오기 (못 불러오면 기본 문구)
   var cfg = window.APP_CONFIG || {};
+  // 관리자 미리보기: 저장 전 문구를 부모 창(admin.html)에서 받아 그림
+  if (/[?&]preview=1/.test(location.search) && window.parent !== window) {
+    window.addEventListener("message", function (e) {
+      if (e.source !== window.parent || !e.data || e.data.type !== "draftBoxes") return;
+      boxes = e.data.boxes || boxes; paint();
+    });
+    paint();
+    window.parent.postMessage({ type: "preview-ready" }, "*");
+    return;
+  }
   paint();
   if (cfg.SUPABASE_URL && window.supabase) {
     var sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false, storageKey: "sb-info" } });
