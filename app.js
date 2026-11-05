@@ -807,6 +807,15 @@
     setTimeout(function () { if (!state.editing && !state.inline) render(); tick(); }, Math.max(ms, 5000));
   }
 
+  // 지금 시간부터 차례로 보며 비어 있는 칸: 합주실 먼저, 차 있으면 드럼연습실, 둘 다 차 있으면 다음 시간대
+  function idleTarget() {
+    var start = nowCell().slot, day = kst().date, rooms = state.day === day ? state.rooms : emptyRooms();
+    for (var sl = start; sl < SLOTS; sl++) {
+      if (!rooms.band[sl]) return { room: "band", slot: sl };
+      if (!rooms.drum[sl]) return { room: "drum", slot: sl };
+    }
+    return { room: "band", slot: start }; // 끝까지 다 차 있으면 지금 시간 합주실
+  }
   // ---------- 자리 비움: 1분 동안 아무 조작이 없으면 지금 시간의 합주실 칸으로 ----------
   var IDLE_MS = 60 * 1000, lastActive = Date.now();
   ["keydown", "pointerdown", "input", "wheel"].forEach(function (ev) {
@@ -815,7 +824,7 @@
   setInterval(function () {
     if (!state.isAdmin || !KB || state.editing || state.inlineBusy || drag.on) return;
     if (Date.now() - lastActive < IDLE_MS || document.visibilityState !== "visible") return;
-    var t = nowCell(), cur = state.inline;
+    var t = idleTarget(), cur = state.inline;
     if (cur && cur.room === t.room && cur.slot === t.slot && (state.inlineMode || "select") === "select" && !state.range) return;
     if (blurTimer) { clearTimeout(blurTimer); blurTimer = null; }
     var inp = document.getElementById("inline-input");
