@@ -191,7 +191,7 @@
       var b = el("button", "daytab" + (d === state.day ? " on" : "") + (d === today ? " today" : ""));
       b.type = "button"; b.setAttribute("role", "tab"); b.setAttribute("aria-selected", d === state.day ? "true" : "false");
       b.appendChild(el("span", "dname", DAY_NAME[d]));
-      b.appendChild(el("span", "dcount", n ? String(n) : ""));
+      b.appendChild(el("span", "dcount", n ? String(n / 2) : "")); // 30분 칸 2개 = 1시간 (8칸 → 4, 1칸 → 0.5)
       b.onclick = function () { state.day = d; render(); };
       tabs.appendChild(b);
     });
