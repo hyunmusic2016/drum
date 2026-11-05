@@ -3,6 +3,9 @@
   var aside = document.getElementById("info");
   if (!aside || !window.SiteContent) return;
   var SC = window.SiteContent, boxes = SC.defaults(), settings = Object.assign({}, SC.SETTINGS);
+  // 관리자 [안내 문구] 오른쪽 미리보기: 홈 화면과 똑같은 코드로 안내 칸만 보여 줌
+  var INFO_ONLY = /[?&]infoonly=1/.test(location.search) && window.parent !== window;
+  if (INFO_ONLY) document.documentElement.classList.add("info-only");
 
   function paint() {
     SC.applySettings(aside, settings);
@@ -15,7 +18,7 @@
   // 표와 위아래를 딱 맞춤: 안내 칸 높이 = 표 높이, 넘치면 글씨를 조금씩 줄임
   function fit() {
     var sheet = document.querySelector(".wrap.home .sheet");
-    var side = sheet && aside.getBoundingClientRect().left > sheet.getBoundingClientRect().right;
+    var side = sheet && (INFO_ONLY || aside.getBoundingClientRect().left > sheet.getBoundingClientRect().right);
     aside.style.removeProperty("--info-fs");
     if (!side) { aside.style.height = ""; aside.classList.remove("fitted"); return; }
     var h = sheet.offsetHeight;
@@ -24,6 +27,7 @@
     var fs = 14;
     aside.style.setProperty("--info-fs", fs + "px");
     while (natural() > h && fs > 10) { fs -= 0.5; aside.style.setProperty("--info-fs", fs + "px"); }
+    if (INFO_ONLY) window.parent.postMessage({ type: "preview-size", h: h }, "*");
   }
   function natural() {
     var t = 0, boxes = aside.querySelectorAll(".info-box");

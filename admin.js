@@ -298,9 +298,24 @@
     var wrap = el("div", "content-edit");
     if (!state.content) { wrap.appendChild(el("p", "note", "불러오는 중…")); if (!state.contentLoading) { state.contentLoading = true; loadContent().then(function () { state.contentLoading = false; }); } return wrap; }
     var boxes = state.content;
-    var form = el("div", "cform"), pv = el("aside", "info cpreview");
+    var form = el("div", "cform"), pv = el("div", "cpreview");
+    // 오른쪽 미리보기 = 실제 홈 화면 코드 (index.html?infoonly=1) 그대로
+    var pvf = el("iframe"); pvf.title = "홈 화면 안내 칸 미리보기"; pvf.src = "index.html?preview=1&infoonly=1";
+    pv.appendChild(pvf);
+    var pvReady = false;
+    function sendDraft() {
+      if (pvReady && pvf.contentWindow) pvf.contentWindow.postMessage({ type: "draftBoxes", boxes: clone(boxes), settings: clone(state.cset) }, "*");
+    }
+    if (state.pvListener) window.removeEventListener("message", state.pvListener);
+    state.pvListener = function (e) {
+      if (e.source !== pvf.contentWindow || !e.data) return;
+      if (e.data.type === "preview-ready") { pvReady = true; sendDraft(); }
+      else if (e.data.type === "preview-size" && e.data.h) pvf.style.height = (e.data.h + 2) + "px";
+    };
+    window.addEventListener("message", state.pvListener);
     var acts = el("div", "lesson-acts");
-    function refresh() { SC.applySettings(pv, state.cset); pv.innerHTML = SC.render(boxes); SC.drawQr(pv); bar(); }
+    var pvTimer = null;
+    function refresh() { clearTimeout(pvTimer); pvTimer = setTimeout(sendDraft, 60); bar(); }
 
     // 전체 설정: 자간
     var gset = el("div", "cbox cglobal");
