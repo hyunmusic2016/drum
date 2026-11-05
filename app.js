@@ -115,7 +115,6 @@
     document.body.classList.toggle("has-bar", state.editing);
 
     var hd = el("header"), l = el("div");
-    l.appendChild(el("div", "eyebrow", "PRACTICE ROOM BOOKING"));
     var tl = el("div", "titleline");
     tl.appendChild(el("h1", null, "합주실 · 드럼연습실 예약"));
     var ck = el("span", "clock", clockText()); ck.id = "clock"; tl.appendChild(ck);

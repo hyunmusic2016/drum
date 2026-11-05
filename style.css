@@ -234,3 +234,6 @@ body:has(.wrap.home) .foot{max-width:calc(var(--home-w, 760px) + 32px)}
 .pv-frame iframe{width:100%;height:100%;border:0;border-radius:10px;background:var(--bg);box-shadow:0 10px 40px rgba(0,0,0,.3)}
 .pv-frame.mobile iframe{width:390px;max-width:100%}
 .cglobal{flex-direction:row;align-items:center;justify-content:space-between}
+/* 홈: 맨 위 영문 문구 없이 제목 줄을 옆에 놓는 다른 페이지(B1 음악 연습실 예약)와 같은 높이로 */
+.page > .wrap.home{padding-top:22px}
+.wrap.home header{margin-bottom:14px}
