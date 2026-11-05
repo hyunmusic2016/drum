@@ -152,3 +152,4 @@ body.filling,body.filling *{cursor:crosshair!important;user-select:none}
 .memo{margin:12px 0 0;font-size:14px;color:var(--muted)}
 .menutotal{margin-left:auto;align-self:center;font-size:16px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;padding:0 4px}
 .titleline .chip.live{align-self:center}
+.sheet.lessons-sheet{width:auto;grid-template-columns:auto 1fr 1fr} /* 관리자: 요일 탭(월~일) 너비까지 */
