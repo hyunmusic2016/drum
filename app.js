@@ -166,7 +166,6 @@
       c.onclick = function () { if (state.sel[key]) delete state.sel[key]; else state.sel[key] = 1; render(); };
     } else if (state.isAdmin) {
       c.classList.add("quick");
-      c.title = "눌러서 입력 · 드래그해서 여러 칸 선택";
       c.dataset.room = r.k; c.dataset.slot = i;
       if (inRange(r.k, i)) c.classList.add("rsel");
       c.addEventListener("pointerdown", function (e) { dragStart(e, r.k, i); });
@@ -506,7 +505,7 @@
     d.appendChild(keys);
     // 엑셀 채우기 핸들: 선택된 칸 오른쪽 아래 동그라미를 위아래로 끌면 같은 내용으로 채움
     if (KB && mode === "select" && v) {
-      var fh = el("div", "fill-handle"); fh.title = "끌어서 위아래 칸에 복사";
+      var fh = el("div", "fill-handle");
       fh.addEventListener("mousedown", function (e) { e.preventDefault(); }); // 입력칸 포커스 유지
       fh.addEventListener("pointerdown", function (e) {
         if (e.button !== 0) return;
