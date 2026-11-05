@@ -91,6 +91,9 @@
   function render() {
     rendering = true;
     try { renderInner(); } finally { rendering = false; }
+    // 아래 버전 표시를 표 오른쪽 끝에 맞춤
+    var shw = document.querySelector(".wrap.home .sheet");
+    if (shw) document.documentElement.style.setProperty("--home-w", shw.offsetWidth + "px");
   }
   function renderInner() {
     var k = kst();
