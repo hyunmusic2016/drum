@@ -285,11 +285,14 @@
       if (res.error) toast("안내 문구를 불러오지 못했어요. site_content.sql을 실행했는지 확인해 주세요.");
       state.content = res.error ? SC.defaults() : SC.fromRows(res.data);
       state.contentSaved = clone(state.content);
+      state.cset = res.error ? Object.assign({}, SC.SETTINGS) : SC.settingsFromRows(res.data);
+      state.csetSaved = clone(state.cset);
       render();
     });
   }
   function contentDirty() {
-    return !!state.content && JSON.stringify(state.content) !== JSON.stringify(state.contentSaved);
+    return !!state.content && (JSON.stringify(state.content) !== JSON.stringify(state.contentSaved) ||
+      JSON.stringify(state.cset) !== JSON.stringify(state.csetSaved));
   }
   function contentForm() {
     var wrap = el("div", "content-edit");
@@ -297,7 +300,21 @@
     var boxes = state.content;
     var form = el("div", "cform"), pv = el("aside", "info cpreview");
     var acts = el("div", "lesson-acts");
-    function refresh() { pv.innerHTML = SC.render(boxes); SC.drawQr(pv); bar(); }
+    function refresh() { SC.applySettings(pv, state.cset); pv.innerHTML = SC.render(boxes); SC.drawQr(pv); bar(); }
+
+    // 전체 설정: 자간
+    var gset = el("div", "cbox cglobal");
+    var lsl = el("label", "csize"); lsl.appendChild(document.createTextNode("전체 자간 "));
+    var ls = el("input"); ls.type = "range"; ls.min = -0.1; ls.max = 0.05; ls.step = 0.005; ls.value = state.cset.letterSpacing || 0;
+    ls.setAttribute("aria-label", "전체 자간");
+    function lsText(v) { v = Math.round(v * 1000) / 10; return (v > 0 ? "+" : "") + v + "%"; }
+    var lsv = el("span", "cszv", lsText(+ls.value));
+    ls.oninput = function () { state.cset.letterSpacing = +ls.value; lsv.textContent = lsText(+ls.value); refresh(); };
+    lsl.appendChild(ls); lsl.appendChild(lsv);
+    var lsr = el("button", "btn ib", "기본"); lsr.type = "button";
+    lsr.onclick = function () { state.cset.letterSpacing = 0; ls.value = 0; lsv.textContent = lsText(0); refresh(); };
+    gset.appendChild(lsl); gset.appendChild(lsr);
+    form.appendChild(gset);
     function move(i, d) { var j = i + d; if (j < 0 || j >= boxes.length) return; var t = boxes[i]; boxes[i] = boxes[j]; boxes[j] = t; render(); }
 
     boxes.forEach(function (b, i) {
@@ -329,12 +346,20 @@
         sel.onchange = function () { b.style = sel.value; refresh(); };
         opt.appendChild(sel);
       }
-      var szl = el("label", "csize"); szl.appendChild(document.createTextNode("글씨 "));
+      var szl = el("label", "csize"); szl.appendChild(document.createTextNode(b.type === "qr" ? "글씨 " : "글씨 "));
       var rg = el("input"); rg.type = "range"; rg.min = 70; rg.max = 160; rg.step = 5; rg.value = b.scale || 100; rg.setAttribute("aria-label", "글씨 크기");
       var rv = el("span", "cszv", (b.scale || 100) + "%");
       rg.oninput = function () { b.scale = +rg.value; rv.textContent = rg.value + "%"; refresh(); };
       szl.appendChild(rg); szl.appendChild(rv);
       opt.appendChild(szl);
+      if (b.type === "qr") { // 이미지 크기는 글씨와 따로
+        var iml = el("label", "csize"); iml.appendChild(document.createTextNode("이미지 "));
+        var ir = el("input"); ir.type = "range"; ir.min = 40; ir.max = 200; ir.step = 5; ir.value = b.imgScale || 100; ir.setAttribute("aria-label", "이미지 크기");
+        var iv = el("span", "cszv", (b.imgScale || 100) + "%");
+        ir.oninput = function () { b.imgScale = +ir.value; iv.textContent = ir.value + "%"; refresh(); };
+        iml.appendChild(ir); iml.appendChild(iv);
+        opt.appendChild(iml);
+      }
       card.appendChild(opt);
 
       // QR 이미지
@@ -387,7 +412,7 @@
       var dirty = contentDirty();
       if (dirty) acts.appendChild(el("span", "dirty", "저장 안 됨"));
       var cb = el("button", "btn", "취소"); cb.type = "button"; cb.disabled = !dirty || state.contentSaving;
-      cb.onclick = function () { state.content = clone(state.contentSaved); render(); };
+      cb.onclick = function () { state.content = clone(state.contentSaved); state.cset = clone(state.csetSaved); render(); };
       var sv = el("button", "btn save-btn", state.contentSaving ? "저장 중…" : "저장"); sv.type = "button";
       sv.disabled = !dirty || state.contentSaving; sv.onclick = saveContent;
       var pvb = el("button", "btn", "홈 화면 미리보기"); pvb.type = "button"; pvb.onclick = openHomePreview;
@@ -402,7 +427,7 @@
   }
   // 실제 홈 화면에 저장 전 문구를 넣어 보여 주는 창
   function openHomePreview() {
-    var draft = JSON.parse(JSON.stringify(state.content));
+    var draft = JSON.parse(JSON.stringify(state.content)), draftSet = clone(state.cset);
     var ov = el("div", "pv-overlay"); ov.setAttribute("role", "dialog"); ov.setAttribute("aria-label", "홈 화면 미리보기");
     var top = el("div", "pv-top");
     top.appendChild(el("strong", null, "홈 화면 미리보기" + (contentDirty() ? " (저장 전)" : "")));
@@ -420,7 +445,7 @@
     // 미리보기 창이 준비되면 저장 전 문구를 보냄
     function onMsg(e) {
       if (e.source === fr.contentWindow && e.data && e.data.type === "preview-ready")
-        fr.contentWindow.postMessage({ type: "draftBoxes", boxes: draft }, "*");
+        fr.contentWindow.postMessage({ type: "draftBoxes", boxes: draft, settings: draftSet }, "*");
     }
     window.addEventListener("message", onMsg);
     function shut() { ov.remove(); document.removeEventListener("keydown", onKey); window.removeEventListener("message", onMsg); }
@@ -435,10 +460,14 @@
   function saveContent() {
     if (!contentDirty() || state.contentSaving) return;
     state.contentSaving = true; render();
-    sb.from("site_content").upsert([{ key: "boxes", value: JSON.stringify(state.content), updated_at: new Date().toISOString() }]).then(function (res) {
+    var now = new Date().toISOString();
+    sb.from("site_content").upsert([
+      { key: "boxes", value: JSON.stringify(state.content), updated_at: now },
+      { key: "info_settings", value: JSON.stringify(state.cset), updated_at: now }
+    ]).then(function (res) {
       state.contentSaving = false;
       if (res.error) { render(); toast(/row-level security|permission/i.test(res.error.message) ? "저장 권한이 없어요." : "저장하지 못했어요: " + res.error.message); return; }
-      state.contentSaved = clone(state.content);
+      state.contentSaved = clone(state.content); state.csetSaved = clone(state.cset);
       render(); toast("저장했어요");
     }, function () { state.contentSaving = false; render(); toast("저장하지 못했어요. 인터넷 연결을 확인해 주세요."); });
   }

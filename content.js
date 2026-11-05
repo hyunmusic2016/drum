@@ -17,7 +17,7 @@
 
   function uid() { return "b" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function box(type, title, body, style, extra) {
-    return Object.assign({ id: uid(), type: type, title: title, body: body, style: style, scale: 100, hidden: false, image: "" }, extra || {});
+    return Object.assign({ id: uid(), type: type, title: title, body: body, style: style, scale: 100, imgScale: 100, hidden: false, image: "" }, extra || {});
   }
   // 예전 키(usage, caution …) → 상자 목록
   function fromOld(o) {
@@ -62,7 +62,8 @@
 
   function boxHtml(b) {
     var sc = Math.max(50, Math.min(200, +b.scale || 100)) / 100;
-    var h = '<section class="info-box st-' + esc(b.style || "list") + (b.type === "qr" ? " qr-box" : "") + '" style="--box-scale:' + sc + '">';
+    var isc = Math.max(30, Math.min(250, +b.imgScale || 100)) / 100;
+    var h = '<section class="info-box st-' + esc(b.style || "list") + (b.type === "qr" ? " qr-box" : "") + '" style="--box-scale:' + sc + ';--img-scale:' + isc + '">';
     if (b.title) h += "<h2>" + esc(b.title) + "</h2>";
     if (b.type === "qr") {
       h += b.image ? '<img class="qr-img" src="' + esc(b.image) + '" alt="QR코드">' : '<div class="qr" data-qr aria-label="이 페이지 주소 QR코드"></div>';
@@ -84,5 +85,16 @@
       el.removeAttribute("title");
     });
   }
-  window.SiteContent = { STYLES: STYLES, defaults: defaults, fromRows: fromRows, newText: newText, newQr: newQr, render: render, drawQr: drawQr };
+  // 안내 칸 전체 설정 (자간)
+  var SETTINGS = { letterSpacing: 0 };
+  function settingsFromRows(rows) {
+    var v = null;
+    (rows || []).forEach(function (r) { if (r.key === "info_settings") v = r.value; });
+    try { return Object.assign({}, SETTINGS, v ? JSON.parse(v) : {}); } catch (e) { return Object.assign({}, SETTINGS); }
+  }
+  function applySettings(el, st) {
+    st = Object.assign({}, SETTINGS, st || {});
+    el.style.setProperty("--info-ls", (+st.letterSpacing || 0) + "em");
+  }
+  window.SiteContent = { SETTINGS: SETTINGS, settingsFromRows: settingsFromRows, applySettings: applySettings, STYLES: STYLES, defaults: defaults, fromRows: fromRows, newText: newText, newQr: newQr, render: render, drawQr: drawQr };
 })();

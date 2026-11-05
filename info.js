@@ -2,9 +2,10 @@
   "use strict";
   var aside = document.getElementById("info");
   if (!aside || !window.SiteContent) return;
-  var SC = window.SiteContent, boxes = SC.defaults();
+  var SC = window.SiteContent, boxes = SC.defaults(), settings = Object.assign({}, SC.SETTINGS);
 
   function paint() {
+    SC.applySettings(aside, settings);
     aside.innerHTML = SC.render(boxes);
     SC.drawQr(aside);
     aside.querySelectorAll(".qr-img").forEach(function (img) { img.addEventListener("load", fit); });
@@ -39,7 +40,7 @@
   if (/[?&]preview=1/.test(location.search) && window.parent !== window) {
     window.addEventListener("message", function (e) {
       if (e.source !== window.parent || !e.data || e.data.type !== "draftBoxes") return;
-      boxes = e.data.boxes || boxes; paint();
+      boxes = e.data.boxes || boxes; settings = e.data.settings || settings; paint();
     });
     paint();
     window.parent.postMessage({ type: "preview-ready" }, "*");
@@ -50,7 +51,7 @@
     var sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false, storageKey: "sb-info" } });
     sb.from("site_content").select("key,value").then(function (res) {
       if (res.error || !res.data) return;
-      boxes = SC.fromRows(res.data);
+      boxes = SC.fromRows(res.data); settings = SC.settingsFromRows(res.data);
       paint();
     }, function () {});
   }
