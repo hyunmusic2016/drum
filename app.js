@@ -103,7 +103,10 @@
 
     var hd = el("header"), l = el("div");
     l.appendChild(el("div", "eyebrow", "PRACTICE ROOM BOOKING"));
-    l.appendChild(el("h1", null, "합주실 · 드럼연습실 예약"));
+    var tl = el("div", "titleline");
+    tl.appendChild(el("h1", null, "합주실 · 드럼연습실 예약"));
+    var ck = el("span", "clock", clockText()); ck.id = "clock"; tl.appendChild(ck);
+    l.appendChild(tl);
     var dt = el("div", "date");
     var lv = el("span", "chip live" + (state.live ? "" : " off"), state.live ? "실시간" : "자동 새로고침");
     lv.id = "livechip";
@@ -863,6 +866,13 @@
     state.inline = null; state.inlineValue = null; state.queued = null;
     selectCell(t);
   }, 5000);
+
+  // ---------- 현재 시각 (한국 시간, 1초마다) ----------
+  function clockText() {
+    var f = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true });
+    return f.format(new Date());
+  }
+  setInterval(function () { var c = document.getElementById("clock"); if (c) c.textContent = clockText(); }, 1000);
 
   // ---------- boot ----------
   render();

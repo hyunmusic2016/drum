@@ -142,3 +142,5 @@ body.filling,body.filling *{cursor:crosshair!important;user-select:none}
 .lessons-sheet .cell.pv-on{background:var(--lesson);color:var(--lesson-ink);outline:2px dashed var(--accent);outline-offset:-3px}
 .lessons-sheet .cell.pv-off{background:var(--paper)!important;color:var(--muted)!important;outline:2px dashed var(--muted);outline-offset:-3px}
 .lessons-sheet .cell.pv-off .nm{text-decoration:line-through}
+.titleline{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px}
+.clock{font-family:var(--f-mono);font-size:clamp(15px,3.6vw,18px);font-weight:500;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
