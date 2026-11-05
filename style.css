@@ -130,3 +130,12 @@ a.btn.link{color:var(--muted);text-decoration:underline}
 .cell.b.fillsel{outline:2px dashed var(--band-line);outline-offset:-3px}
 .cell.d.fillsel{outline:2px dashed var(--drum-line);outline-offset:-3px}
 body.filling,body.filling *{cursor:crosshair!important;user-select:none}
+/* admin: 메뉴 탭 */
+.menutabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px}
+.menutab{border:0;background:none;padding:10px 14px;font-size:15px;font-weight:500;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-1px}
+.menutab.on{color:var(--ink);font-weight:700;border-bottom-color:var(--ink)}
+.menutab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.pwform{display:flex;flex-direction:column;gap:8px;max-width:360px}
+.pwform input{flex:none;font:inherit;font-size:16px;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink)}
+.pwform .btn{align-self:flex-start}
+.pwform p{margin:0;font-size:13px}

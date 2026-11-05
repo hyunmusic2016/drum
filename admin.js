@@ -17,7 +17,8 @@
   var state = {
     session: null, isAdmin: false, checked: false,
     lessons: {},          // "weekday:room:hour" -> label
-    loaded: false, day: kst().dow, busy: {}, loginMsg: ""
+    loaded: false, day: kst().dow, busy: {}, loginMsg: "", pwMsg: "",
+    tab: location.hash === "#password" ? "password" : "lessons"
   };
 
   function kst() {
@@ -111,7 +112,7 @@
 
     var hd = el("header"), l = el("div");
     l.appendChild(el("div", "eyebrow", "ADMIN"));
-    l.appendChild(el("h1", null, state.checked && !state.session ? "관리자 로그인" : "정기 수업"));
+    l.appendChild(el("h1", null, state.checked && !state.session ? "관리자 로그인" : "관리자 페이지"));
     hd.appendChild(l);
     var back = el("a", "btn", "예약표로"); back.href = "./";
     var tools = el("div", "tools"); tools.appendChild(back);
@@ -130,6 +131,17 @@
       root.appendChild(el("p", "notice warn", (state.session.user.email || "") + " 계정은 관리자가 아니에요."));
       return;
     }
+
+    // 메뉴 탭: 정기 수업 / 비밀번호 변경
+    var menu = el("div", "menutabs"); menu.setAttribute("role", "tablist");
+    [["lessons", "정기 수업"], ["password", "비밀번호 변경"]].forEach(function (m) {
+      var b = el("button", "menutab" + (state.tab === m[0] ? " on" : ""), m[1]);
+      b.type = "button"; b.setAttribute("role", "tab"); b.setAttribute("aria-selected", state.tab === m[0] ? "true" : "false");
+      b.onclick = function () { state.tab = m[0]; try { history.replaceState(null, "", "#" + m[0]); } catch (er) {} render(); };
+      menu.appendChild(b);
+    });
+    root.appendChild(menu);
+    if (state.tab === "password") { root.appendChild(passwordForm()); return; }
 
     // 요일 탭
     var tabs = el("div", "daytabs"); tabs.setAttribute("role", "tablist");
@@ -166,6 +178,39 @@
       });
     });
     root.appendChild(sh);
+  }
+
+  function passwordForm() {
+    var f = el("form", "pwform");
+    function field(id, ph, ac) {
+      var i = el("input"); i.type = "password"; i.id = id; i.required = true; i.placeholder = ph;
+      i.autocomplete = ac; i.setAttribute("aria-label", ph); f.appendChild(i); return i;
+    }
+    var cur = field("pw-current", "현재 비밀번호", "current-password");
+    var nw = field("pw-new", "새 비밀번호 (6자 이상)", "new-password");
+    var nw2 = field("pw-new2", "새 비밀번호 확인", "new-password");
+    var b = el("button", "btn primary", "비밀번호 변경"); b.type = "submit"; f.appendChild(b);
+    if (state.pwMsg) f.appendChild(el("p", "login-err", state.pwMsg));
+    function fail(msg) { state.pwMsg = msg; b.disabled = false; var old = f.querySelector(".login-err"); if (old) old.remove(); f.appendChild(el("p", "login-err", msg)); }
+    f.onsubmit = function (e) {
+      e.preventDefault();
+      if (nw.value.length < 6) return fail("새 비밀번호는 6자 이상이어야 해요.");
+      if (nw.value !== nw2.value) return fail("새 비밀번호가 서로 달라요.");
+      if (nw.value === cur.value) return fail("지금 비밀번호와 다른 비밀번호를 넣어 주세요.");
+      b.disabled = true;
+      var email = state.session.user.email;
+      // 현재 비밀번호가 맞는지 먼저 확인
+      sb.auth.signInWithPassword({ email: email, password: cur.value }).then(function (r1) {
+        if (r1.error) return fail("현재 비밀번호가 맞지 않아요.");
+        return sb.auth.updateUser({ password: nw.value }).then(function (r2) {
+          if (r2.error) return fail("바꾸지 못했어요: " + r2.error.message);
+          state.pwMsg = ""; cur.value = nw.value = nw2.value = ""; b.disabled = false;
+          var old = f.querySelector(".login-err"); if (old) old.remove();
+          toast("비밀번호를 바꿨어요");
+        });
+      }, function () { fail("바꾸지 못했어요. 인터넷 연결을 확인해 주세요."); });
+    };
+    return f;
   }
 
   function loginForm() {
