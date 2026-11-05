@@ -807,6 +807,24 @@
     setTimeout(function () { if (!state.editing && !state.inline) render(); tick(); }, Math.max(ms, 5000));
   }
 
+  // ---------- 자리 비움: 1분 동안 아무 조작이 없으면 지금 시간의 합주실 칸으로 ----------
+  var IDLE_MS = 60 * 1000, lastActive = Date.now();
+  ["keydown", "pointerdown", "input", "wheel"].forEach(function (ev) {
+    document.addEventListener(ev, function () { lastActive = Date.now(); }, true);
+  });
+  setInterval(function () {
+    if (!state.isAdmin || !KB || state.editing || state.inlineBusy || drag.on) return;
+    if (Date.now() - lastActive < IDLE_MS || document.visibilityState !== "visible") return;
+    var t = nowCell(), cur = state.inline;
+    if (cur && cur.room === t.room && cur.slot === t.slot && (state.inlineMode || "select") === "select" && !state.range) return;
+    if (blurTimer) { clearTimeout(blurTimer); blurTimer = null; }
+    var inp = document.getElementById("inline-input");
+    if (inp) inp.onblur = null;      // 치다 만 내용은 저장하지 않고 버림
+    clearRange(true);
+    state.inline = null; state.inlineValue = null; state.queued = null;
+    selectCell(t);
+  }, 5000);
+
   // ---------- boot ----------
   render();
   tick();
