@@ -37,7 +37,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .btn:focus-visible,.cell:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .btn[disabled]{opacity:.5;cursor:default}
 .admin-tag{font-size:12px;color:var(--accent);font-weight:700}
-.sheet{background:var(--paper);border:1px solid var(--line);border-radius:12px;overflow:visible;display:grid;grid-template-columns:minmax(5.6rem,auto) 1fr 1fr;grid-template-rows:auto;grid-auto-rows:44px}
+.sheet{background:var(--paper);border:1px solid var(--line);border-radius:12px;overflow:visible;display:grid;width:fit-content;max-width:100%;grid-template-columns:auto minmax(0,200px) minmax(0,200px);grid-template-rows:auto;grid-auto-rows:44px}
 /* 둥근 모서리는 모서리 칸에서 직접 (채우기 동그라미가 표 밖으로 나와도 잘리지 않게) */
 .sheet > :nth-child(1){border-top-left-radius:11px}
 .sheet > :nth-child(3){border-top-right-radius:11px}
@@ -47,7 +47,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .h.t{font-weight:500;font-size:12px;color:var(--muted);letter-spacing:.06em}
 .h.band{background:var(--band-room);color:var(--band-room-ink)}
 .h.drum{background:var(--drum-room);color:var(--drum-room-ink);border-left:1px solid var(--line)}
-.time{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:13px;padding:0 10px;display:flex;align-items:center;gap:6px;border-top:1px solid var(--line);min-height:44px;white-space:nowrap;position:relative}
+.time{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:17px;font-weight:500;padding:0 14px;display:flex;align-items:center;gap:6px;border-top:1px solid var(--line);min-height:44px;white-space:nowrap;position:relative}
 .time.alt{background:var(--band)}
 .time.hour{border-top-color:var(--muted)}
 .time.now::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}
@@ -111,7 +111,7 @@ input[type=email],input[type=password],.bar input{flex:1 1 180px;min-width:0;fon
 .bar .hint{flex-basis:100%;font-size:13px;color:var(--muted)}
 .bar .spacer{flex:1 1 0}
 .status{font-size:13px;color:var(--accent)}
-@media (max-width:420px){.time{padding:0 6px;font-size:12px}.sheet{grid-template-columns:minmax(4.9rem,auto) 1fr 1fr}.cell{padding:4px 4px}}
+@media (max-width:420px){.time{padding:0 8px;font-size:15px}.cell{padding:4px 4px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 /* admin: 요일 탭 */
 .daytabs{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:12px}
