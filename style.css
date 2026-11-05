@@ -162,3 +162,8 @@ body:has(.wrap.home) .foot{max-width:calc(var(--home-w, 760px) + 32px)}
 /* 시간 글자와 "지금"을 위아래 가운데로 딱 맞춤 */
 .time > span{line-height:1;display:inline-flex;align-items:center}
 .now-tag{line-height:1}
+/* admin: 정기 수업 저장/취소 */
+.lesson-acts{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin:-4px 0 12px}
+.lesson-acts .dirty{font-size:13px;color:var(--accent);font-weight:500;margin-right:4px}
+.btn.save-btn{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.save-btn[disabled],.lesson-acts .btn[disabled]{opacity:.4}

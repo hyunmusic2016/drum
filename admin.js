@@ -66,37 +66,64 @@
       if (res.error) { toast("수업 시간표를 불러오지 못했어요. lessons_30min.sql을 실행했는지 확인해 주세요."); return; }
       var m = {};
       (res.data || []).forEach(function (l) { m[key(l.weekday, l.room, l.slot)] = l.label; });
-      state.lessons = m; state.loaded = true;
+      state.lessons = m; state.saved = Object.assign({}, m); state.loaded = true;
       render();
     });
   }
 
-  // 여러 칸을 한 번에 켜기/끄기 (cells: [{room, slot}], on: true=수업 넣기)
+  // 여러 칸을 한 번에 켜기/끄기 (화면에서만 바뀜, [저장]을 눌러야 저장)
   function setCells(d, cells, on) {
     cells = cells.filter(function (c) { return !!state.lessons[key(d, c.room, c.slot)] !== on; });
     if (!cells.length) return;
     cells.forEach(function (c) { if (on) state.lessons[key(d, c.room, c.slot)] = LABEL; else delete state.lessons[key(d, c.room, c.slot)]; });
     render();
+  }
+  // 저장된 것과 지금 화면의 차이
+  function diff() {
+    var add = [], del = [], saved = state.saved || {};
+    Object.keys(state.lessons).forEach(function (k) { if (!saved[k]) add.push(k); });
+    Object.keys(saved).forEach(function (k) { if (!state.lessons[k]) del.push(k); });
+    return { add: add, del: del, n: add.length + del.length };
+  }
+  function parseKey(k) { var p = k.split(":"); return { weekday: +p[0], room: p[1], slot: +p[2] }; }
+  function cancelEdits() { state.lessons = Object.assign({}, state.saved || {}); render(); }
+  function saveEdits() {
+    var df = diff(); if (!df.n || state.saving) return;
+    state.saving = true; render();
     var jobs = [];
-    if (on) jobs.push(sb.from("lesson_slots").upsert(cells.map(function (c) { return { weekday: d, room: c.room, slot: c.slot, label: LABEL }; })));
-    else ROOMS.forEach(function (r) {
-      var sl = cells.filter(function (c) { return c.room === r.k; }).map(function (c) { return c.slot; });
-      if (sl.length) jobs.push(sb.from("lesson_slots").delete().eq("weekday", d).eq("room", r.k).in("slot", sl));
+    if (df.add.length) jobs.push(sb.from("lesson_slots").upsert(df.add.map(function (k) { var c = parseKey(k); c.label = LABEL; return c; })));
+    var groups = {};
+    df.del.forEach(function (k) { var c = parseKey(k), g = c.weekday + ":" + c.room; (groups[g] = groups[g] || []).push(c.slot); });
+    Object.keys(groups).forEach(function (g) {
+      var p = g.split(":");
+      jobs.push(sb.from("lesson_slots").delete().eq("weekday", +p[0]).eq("room", p[1]).in("slot", groups[g]));
     });
-    function undoLocal() {
-      cells.forEach(function (c) { if (on) delete state.lessons[key(d, c.room, c.slot)]; else state.lessons[key(d, c.room, c.slot)] = LABEL; });
-      render();
-    }
     Promise.all(jobs).then(function (res) {
+      state.saving = false;
       var err = res.filter(function (x) { return x.error; })[0];
       if (err) {
-        undoLocal();
+        render();
         toast(/row-level security|permission/i.test(err.error.message) ? "저장 권한이 없어요." : "저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
         return;
       }
-      if (d === kst().dow) syncToday(cells, on);
-    }, function () { undoLocal(); toast("저장하지 못했어요. 인터넷 연결을 확인해 주세요."); });
+      state.saved = Object.assign({}, state.lessons);
+      var dow = kst().dow;
+      var addT = df.add.map(parseKey).filter(function (c) { return c.weekday === dow; });
+      var delT = df.del.map(parseKey).filter(function (c) { return c.weekday === dow; });
+      if (addT.length) syncToday(addT, true);
+      if (delT.length) syncToday(delT, false);
+      render();
+      toast("저장했어요");
+    }, function () { state.saving = false; render(); toast("저장하지 못했어요. 인터넷 연결을 확인해 주세요."); });
   }
+  // 저장 안 한 변경이 있으면 페이지를 떠날 때 확인
+  window.addEventListener("beforeunload", function (e) {
+    if (state.isAdmin && state.saved && diff().n) { e.preventDefault(); e.returnValue = ""; }
+  });
+  // ⌘/Ctrl+S 로 저장
+  document.addEventListener("keydown", function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.code === "KeyS" && state.tab === "lessons" && state.isAdmin) { e.preventDefault(); saveEdits(); }
+  });
 
   // 오늘 요일을 바꾸면 오늘 예약표에도 바로 반영 (다른 예약이 있는 칸은 건드리지 않음)
   function syncToday(cells, on) {
@@ -186,6 +213,16 @@
     menu.appendChild(tc);
     root.appendChild(menu);
     if (state.tab === "password") { root.appendChild(passwordForm()); return; }
+
+    // 저장 / 취소
+    var df = diff();
+    var acts = el("div", "lesson-acts");
+    if (df.n) acts.appendChild(el("span", "dirty", df.n + "칸 바뀜"));
+    var cb = el("button", "btn", "취소"); cb.type = "button"; cb.disabled = !df.n || state.saving; cb.onclick = cancelEdits;
+    var svb = el("button", "btn save-btn", state.saving ? "저장 중…" : "저장"); svb.type = "button";
+    svb.disabled = !df.n || state.saving; svb.onclick = saveEdits;
+    acts.appendChild(cb); acts.appendChild(svb);
+    root.appendChild(acts);
 
     // 요일 탭
     var tabs = el("div", "daytabs"); tabs.setAttribute("role", "tablist");
