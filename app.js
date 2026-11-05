@@ -379,7 +379,8 @@
   function inlineCell(r, i, v, hour) {
     // 엑셀처럼: select = 칸만 선택(커서 안 보임, 치면 내용 교체) / type = 치는 중 / edit = 커서 깜빡이며 고치기
     var mode = state.inlineMode || "select";
-    var d = el("div", "cell " + r.c + " inline" + (hour ? " hour" : "") + (KB && mode === "select" ? " selmode" : ""));
+    var d = el("div", "cell " + r.c + " inline" + (hour ? " hour" : "") + (KB && mode === "select" ? " selmode" : "")
+      + (v ? " on" : "") + (v.indexOf("수업") !== -1 ? " lesson" : ""));
     var inp = el("input");
     function setMode(m) { mode = state.inlineMode = m; d.classList.toggle("selmode", KB && m === "select"); }
     // 선택된 칸을 한 번 더 클릭하면 커서가 나타나 그 자리부터 고치기

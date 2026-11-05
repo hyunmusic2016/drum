@@ -5,6 +5,7 @@
   --accent:#d0562b; --sel:#1d2321;
   --lesson:#fbcf9f; --lesson-ink:#7a3410; /* '수업' 칸 */
   --ok:#2f8f46; /* 확인 버튼 */
+  --band-line:#6f95e6; --drum-line:#6fb55e; /* 선택 테두리 */
   --f-body:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
   --name-size:16px; /* 예약자 이름 글씨 크기 (모든 칸 동일) */
@@ -13,7 +14,7 @@
 @media (prefers-color-scheme: dark){:root{
   --bg:#141716; --paper:#1c201f; --ink:#e8ebe9; --muted:#9aa39f; --line:#2f3533; --band:#242928;
   --band-room:#26375c; --band-room-ink:#c6d6fb; --drum-room:#2a4426; --drum-room-ink:#cfe8c6;
-  --accent:#f0784c; --sel:#e8ebe9; --lesson:#6b3a17; --lesson-ink:#ffdcbc; --ok:#3aa457; color-scheme:dark}}
+  --accent:#f0784c; --sel:#e8ebe9; --lesson:#6b3a17; --lesson-ink:#ffdcbc; --ok:#3aa457; --band-line:#7ea2f0; --drum-line:#7fc76d; color-scheme:dark}}
 *{box-sizing:border-box}
 html{padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%}
@@ -61,8 +62,12 @@ button{font:inherit;color:inherit;cursor:pointer}
 .cell.inline{padding:3px;display:flex;align-items:center;gap:3px}
 .cell.inline input{width:100%;min-width:0;font:inherit;font-size:var(--name-size);font-weight:500;text-align:center;border:2px solid var(--accent);border-radius:6px;background:var(--paper);color:var(--ink);padding:2px 4px;height:36px;line-height:1}
 .cell.inline input:focus{outline:none}
-.cell.inline.selmode input{caret-color:transparent;cursor:default}
+/* 칸만 선택된 상태: 엑셀처럼 테두리만 (합주실 파랑, 드럼연습실 초록) */
+.cell.inline.selmode.b{box-shadow:inset 0 0 0 3px var(--band-line)}
+.cell.inline.selmode.d{box-shadow:inset 0 0 0 3px var(--drum-line)}
+.cell.inline.selmode input{caret-color:transparent;cursor:default;border-color:transparent;background:transparent;color:inherit}
 .cell.inline.selmode input::selection{background:transparent;color:inherit}
+.cell.inline.selmode .acts,.cell.inline.selmode .keyhint{display:none!important}
 .ext-btn{flex:none;height:36px;border:1px solid var(--accent);background:var(--paper);color:var(--accent);border-radius:6px;padding:0 6px;font-size:12px;font-weight:700;line-height:1;white-space:nowrap;touch-action:manipulation}
 .ext-btn:active{background:var(--accent);color:var(--paper)}
 .ok-btn{flex:none;height:36px;border:1px solid var(--ok);background:var(--ok);color:#fff;border-radius:6px;padding:0 7px;font-size:12px;font-weight:700;line-height:1;white-space:nowrap;touch-action:manipulation}
