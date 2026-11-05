@@ -179,6 +179,11 @@
       b.onclick = function () { state.tab = m[0]; try { history.replaceState(null, "", "#" + m[0]); } catch (er) {} render(); };
       menu.appendChild(b);
     });
+    // 일주일 정기 수업 합계 (1시간 = 1명, 30분 = 0.5)
+    var total = 0;
+    Object.keys(state.lessons).forEach(function () { total++; });
+    var tc = el("span", "menutotal", String(total / 2) + "명");
+    menu.appendChild(tc);
     root.appendChild(menu);
     if (state.tab === "password") { root.appendChild(passwordForm()); return; }
 

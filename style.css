@@ -150,3 +150,4 @@ body.filling,body.filling *{cursor:crosshair!important;user-select:none}
 .titleline{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px}
 .clock{font-family:var(--f-mono);font-size:clamp(15px,3.6vw,18px);font-weight:500;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .memo{margin:12px 0 0;font-size:14px;color:var(--muted)}
+.menutotal{margin-left:auto;align-self:center;font-size:16px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;padding:0 4px}
