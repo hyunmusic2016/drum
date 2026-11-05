@@ -92,8 +92,16 @@
     rendering = true;
     try { renderInner(); } finally { rendering = false; }
     // 아래 버전 표시를 표 오른쪽 끝에 맞춤
-    var shw = document.querySelector(".wrap.home .sheet");
-    if (shw) document.documentElement.style.setProperty("--home-w", shw.offsetWidth + "px");
+    var shw = document.querySelector(".wrap.home .sheet"), info = document.getElementById("info");
+    if (shw) {
+      var r = shw.getBoundingClientRect(), w = shw.offsetWidth;
+      if (info) {
+        var ir = info.getBoundingClientRect();
+        if (ir.left > r.right) w = Math.round(ir.right - r.left); // 오른쪽 안내 칸까지
+        document.documentElement.style.setProperty("--sheet-top", shw.offsetTop + "px");
+      }
+      document.documentElement.style.setProperty("--home-w", w + "px");
+    }
   }
   function renderInner() {
     var k = kst();
@@ -878,6 +886,7 @@
     return f.format(new Date());
   }
   setInterval(function () { var c = document.getElementById("clock"); if (c) c.textContent = clockText(); }, 1000);
+  window.addEventListener("resize", function () { if (!state.inline) render(); });
 
   // ---------- boot ----------
   render();

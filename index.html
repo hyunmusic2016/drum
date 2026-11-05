@@ -5,19 +5,58 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>합주실 · 드럼연습실 예약</title>
 <meta name="description" content="오늘의 합주실·드럼연습실 예약 현황">
-<link rel="icon" href="favicon.svg?v=1.35.0" type="image/svg+xml">
-<link rel="icon" href="favicon-32.png?v=1.35.0" type="image/png" sizes="32x32">
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=1.35.0">
+<link rel="icon" href="favicon.svg?v=1.36.0" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png?v=1.36.0" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=1.36.0">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<link rel="stylesheet" href="style.css?v=1.35.0">
+<link rel="stylesheet" href="style.css?v=1.36.0">
 </head>
 <body>
+<div class="page">
 <main id="root" class="wrap home"></main>
-<footer class="foot"><span class="ver" title="페이지 버전">v1.35.0</span></footer>
-<script src="config.js?v=1.35.0"></script>
+<aside class="info" id="info">
+  <section class="info-box">
+    <h2>이용안내</h2>
+    <ul>
+      <li>당일 예약과 방문 예약만 가능합니다.</li>
+      <li>하루에 예약할 수 있는 시간은 총 2시간입니다.</li>
+      <li>예약 시간 이후 10분간 입실하지 않을 시 연습실 사용은 취소되며, 연습실 내 연습하는 사람이 없으면 사용은 취소됩니다.</li>
+      <li>본 페이지는 어쿠스틱 드럼 연습실 예약페이지 입니다. 전자 드럼 연습실은 상시 이용 가능합니다.</li>
+      <li class="warn">해당 PC에서 연습실 예약 외 다른 작업은 불가합니다.</li>
+    </ul>
+  </section>
+  <section class="info-box">
+    <h2>유의사항</h2>
+    <ul class="caution">
+      <li>연습실내 물 이외 음식물 반입금지<br><span>(드럼 카페트 오염시 변상)</span></li>
+      <li>방음문 살살 닫기<br><span>(문 고장시 수리비 청구)</span></li>
+    </ul>
+  </section>
+  <section class="info-box">
+    <h2>예약방법</h2>
+    <ol class="howto">
+      <li><b class="num">①</b> 예약을 원하시는 시간대에 본인의 이름을 기입하시면 됩니다.
+        <p class="strong">· 처음 예약은 최대 1시간 가능하며, 1시간 연습 후 다음 예약자가 없으면 30분 단위로 1시간 연장 가능합니다.</p></li>
+      <li><b class="num">②</b> 30분만 예약이 가능합니다.</li>
+      <li><b class="num">③</b> <b>'수업'</b>, <b>'종료'</b> 란은 수강생이 임의로 수정 및 삭제가 불가능 합니다.</li>
+    </ol>
+  </section>
+  <section class="info-box qr-box">
+    <div class="qr" id="qr" aria-label="이 페이지 주소 QR코드"></div>
+    <p class="muted">(해당페이지 URL QR코드)</p>
+    <p><a id="qr-link" href="./"></a></p>
+    <p>본 예약페이지는 외부에서 열람 가능합니다.<br>(예약 불가, 열람만 가능)</p>
+    <p>학원 오시기 전 연습실 예약 현황을 확인 해보세요!</p>
+  </section>
+</aside>
+</div>
+<footer class="foot"><span class="ver" title="페이지 버전">v1.36.0</span></footer>
+<script src="config.js?v=1.36.0"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="hangul.js?v=1.35.0"></script>
-<script src="app.js?v=1.35.0"></script>
+<script src="hangul.js?v=1.36.0"></script>
+<script src="app.js?v=1.36.0"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="info.js?v=1.36.0"></script>
 </body>
 </html>
