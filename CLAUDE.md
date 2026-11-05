@@ -3,7 +3,7 @@
 - 화면에 사용법이나 기능 설명 문구를 넣지 않는다. (안내 문단, "오늘은 예약이 없어요" 같은 빈 상태 문구, 날짜·초기화 칩 등 모두 제외)
   오류·권한 문제처럼 꼭 알려야 하는 것만 짧은 알림(toast)으로 보여 준다.
   예외: 이름을 입력하는 동안에만 입력칸 아래에 키보드 단축키 안내를 띄운다(컴퓨터에서만).
-- 수정할 때마다 버전을 올린다. `index.html`과 `admin.html`의 푸터 `vX.Y.Z`와 모든 `?v=` 쿼리를 함께 바꾸고 `CHANGELOG.md`에 기록한다.
+- 수정할 때마다 버전을 올린다. `index.html`·`admin.html`·`login.html`의 푸터 `vX.Y.Z`와 모든 `?v=` 쿼리를 함께 바꾸고 `CHANGELOG.md`에 기록한다.
   - 기능 추가·화면 변경: 가운데 자리, 오류·문구 수정: 끝자리, 구조 변경: 앞자리
 - 정적 사이트(GitHub Pages) + Supabase. 설정은 `config.js`, DB는 `supabase/schema.sql`(처음 설정), 이후 변경은 `supabase/*.sql` 파일로 추가.
-- 페이지: `index.html`+`app.js`(예약표, 로그인 버튼 없음. admin.html에서 로그인한 관리자는 칸 바로 입력), `admin.html`+`admin.js`(정기 수업), 공통 스타일 `style.css`.
+- 페이지: `index.html`+`app.js`(예약표, 관리자 UI 없음. 로그인한 관리자는 칸 바로 입력), `login.html`+`login.js`(관리자 로그인 → admin.html), `admin.html`+`admin.js`(정기 수업, 로그아웃), 공통 스타일 `style.css`.

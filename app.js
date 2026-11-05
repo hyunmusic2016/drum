@@ -143,7 +143,6 @@
 
     var gap = el("div"); gap.style.height = "12px"; root.appendChild(gap);
 
-    if (sb) root.appendChild(adminArea());
     renderBar();
   }
 

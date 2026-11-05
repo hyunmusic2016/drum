@@ -114,15 +114,20 @@
     l.appendChild(el("h1", null, "정기 수업"));
     hd.appendChild(l);
     var back = el("a", "btn", "예약표로"); back.href = "./";
-    var tools = el("div", "tools"); tools.appendChild(back); hd.appendChild(tools);
+    var tools = el("div", "tools"); tools.appendChild(back);
+    if (state.session) {
+      var lo = el("button", "btn", "로그아웃"); lo.type = "button";
+      lo.onclick = function () { sb.auth.signOut().then(function () { location.href = "./"; }); };
+      tools.appendChild(lo);
+    }
+    hd.appendChild(tools);
     root.appendChild(hd);
 
     if (!sb) { root.appendChild(el("p", "notice warn", "config.js에 Supabase 설정이 필요해요.")); return; }
     if (!state.checked) return;
-    if (!state.session) { root.appendChild(loginForm()); return; }
+    if (!state.session) { location.replace("login.html"); return; } // 로그인은 login.html 에서
     if (!state.isAdmin) {
       root.appendChild(el("p", "notice warn", (state.session.user.email || "") + " 계정은 관리자가 아니에요."));
-      root.appendChild(logoutRow());
       return;
     }
 
@@ -161,37 +166,6 @@
       });
     });
     root.appendChild(sh);
-    root.appendChild(logoutRow());
-  }
-
-  function logoutRow() {
-    var row = el("div", "tools admin-foot");
-    row.appendChild(el("span", "note", state.session.user.email || ""));
-    var b = el("button", "btn link", "로그아웃"); b.type = "button";
-    b.onclick = function () { sb.auth.signOut(); };
-    row.appendChild(b);
-    return row;
-  }
-
-  function loginForm() {
-    var f = el("form", "login");
-    var inp = el("input"); inp.type = "email"; inp.id = "admin-email"; inp.required = true;
-    inp.placeholder = "이메일"; inp.autocomplete = "username"; inp.setAttribute("aria-label", "관리자 이메일");
-    var pw = el("input"); pw.type = "password"; pw.id = "admin-password"; pw.required = true;
-    pw.placeholder = "비밀번호"; pw.autocomplete = "current-password"; pw.setAttribute("aria-label", "비밀번호");
-    f.appendChild(inp); f.appendChild(pw);
-    var sbtn = el("button", "btn primary", "로그인"); sbtn.type = "submit"; f.appendChild(sbtn);
-    if (state.loginMsg) f.appendChild(el("p", "login-err", state.loginMsg));
-    f.onsubmit = function (e) {
-      e.preventDefault(); sbtn.disabled = true;
-      sb.auth.signInWithPassword({ email: inp.value.trim(), password: pw.value }).then(function (res) {
-        state.loginMsg = res.error
-          ? (/invalid/i.test(res.error.message) ? "이메일 또는 비밀번호가 맞지 않아요." : "로그인하지 못했어요: " + res.error.message)
-          : "";
-        render();
-      }, function () { state.loginMsg = "로그인하지 못했어요. 인터넷 연결을 확인해 주세요."; render(); });
-    };
-    return f;
   }
 
   // ---------- boot ----------
