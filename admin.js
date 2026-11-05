@@ -227,6 +227,7 @@
       });
     })(i);
     root.appendChild(sh);
+    root.appendChild(el("p", "memo", "나중에 출석부가 새로 만들어지면 출석부 드럼 시간이랑 자동연동하기"));
   }
 
   function passwordForm() {
