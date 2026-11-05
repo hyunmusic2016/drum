@@ -396,7 +396,11 @@
       if (!(e && e.isComposing) && /(\s\s|[.。]\s)$/.test(inp.value)) {
         var base = inp.value.replace(/(\s\s|[.。]\s)$/, "").trim();
         inp.value = base && base.indexOf("수업") === -1 ? base + " 수업" : (base || "수업");
-        try { inp.setSelectionRange(inp.value.length, inp.value.length); } catch (er) {}
+        state.inlineValue = inp.value;
+        // 바로 확정 (Enter 와 같음: 30분 저장, +30분으로 늘려 둔 칸까지)
+        var cur0 = state.inline;
+        setTimeout(function () { if (!done && state.inline === cur0) go(below(cur0)); }, 0);
+        return;
       }
       state.inlineValue = inp.value;
       var nm = (inp.value || "");
