@@ -109,10 +109,11 @@
     l.appendChild(tl);
     var lv = el("span", "chip live" + (state.live ? "" : " off"), state.live ? "실시간" : "자동 새로고침");
     lv.id = "livechip";
-    if (sb) tl.appendChild(lv); // 현재 시각 오른쪽
+
     hd.appendChild(l);
 
     var tools = el("div", "tools");
+    if (sb) tools.appendChild(lv); // 표 오른쪽 끝에 맞춰
     hd.appendChild(tools);
     root.appendChild(hd);
 

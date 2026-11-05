@@ -153,3 +153,8 @@ body.filling,body.filling *{cursor:crosshair!important;user-select:none}
 .menutotal{margin-left:auto;align-self:center;font-size:16px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;padding:0 4px}
 .titleline .chip.live{align-self:center}
 .sheet.lessons-sheet{width:auto;grid-template-columns:auto 1fr 1fr} /* 관리자: 요일 탭(월~일) 너비까지 */
+/* 홈: 제목 줄을 표 너비에 맞춤 (실시간 표시가 표 오른쪽 끝에) */
+.wrap.home{display:grid;justify-content:start}
+.wrap.home > *{min-width:0}
+.wrap.home header{align-items:flex-end}
+.wrap.home header .tools{margin-left:auto;padding-bottom:4px}
