@@ -123,3 +123,10 @@ input[type=email],input[type=password],.bar input{flex:1 1 180px;min-width:0;fon
 a.btn{color:var(--ink);text-decoration:none;display:inline-block}
 a.btn.link{color:var(--muted);text-decoration:underline}
 .login-err{color:var(--accent)!important}
+/* 채우기 핸들 (엑셀) */
+.fill-handle{position:absolute;right:-6px;bottom:-6px;width:12px;height:12px;border-radius:50%;border:2px solid var(--paper);cursor:crosshair;z-index:8;touch-action:none}
+.cell.b .fill-handle{background:var(--band-line)}
+.cell.d .fill-handle{background:var(--drum-line)}
+.cell.b.fillsel{outline:2px dashed var(--band-line);outline-offset:-3px}
+.cell.d.fillsel{outline:2px dashed var(--drum-line);outline-offset:-3px}
+body.filling,body.filling *{cursor:crosshair!important;user-select:none}

@@ -501,8 +501,63 @@
       var it = el("span", "kh"); it.appendChild(el("kbd", null, p[0])); it.appendChild(document.createTextNode(" " + p[1])); keys.appendChild(it);
     });
     d.appendChild(keys);
+    // 엑셀 채우기 핸들: 선택된 칸 오른쪽 아래 동그라미를 위아래로 끌면 같은 내용으로 채움
+    if (KB && mode === "select" && v) {
+      var fh = el("div", "fill-handle"); fh.title = "끌어서 위아래 칸에 복사";
+      fh.addEventListener("mousedown", function (e) { e.preventDefault(); }); // 입력칸 포커스 유지
+      fh.addEventListener("pointerdown", function (e) {
+        if (e.button !== 0) return;
+        e.preventDefault(); e.stopPropagation();
+        fill = { room: r.k, from: i, to: i, name: v };
+        document.body.classList.add("filling");
+      });
+      d.appendChild(fh);
+    }
     return d;
   }
+
+  // ---------- 채우기 핸들 드래그 ----------
+  var fill = null;
+  function slotAtY(y) {
+    var times = document.querySelectorAll(".sheet > .time");
+    for (var k = 0; k < times.length; k++) {
+      var rc = times[k].getBoundingClientRect();
+      if (y < rc.bottom) return k;
+    }
+    return times.length - 1;
+  }
+  function paintFill() {
+    document.querySelectorAll(".cell.fillsel").forEach(function (c) { c.classList.remove("fillsel"); });
+    if (!fill || fill.to === fill.from) return;
+    var lo = Math.min(fill.from, fill.to), hi = Math.max(fill.from, fill.to);
+    var col = fill.room === "band" ? 1 : 2, kids = document.querySelector(".sheet").children;
+    for (var k = lo; k <= hi; k++) {
+      if (k === fill.from) continue;
+      var c = kids[3 + k * 3 + col]; if (c) c.classList.add("fillsel");
+    }
+  }
+  document.addEventListener("pointermove", function (e) {
+    if (!fill) return;
+    var t = slotAtY(e.clientY);
+    if (t !== fill.to) { fill.to = t; paintFill(); }
+  });
+  document.addEventListener("pointerup", function () {
+    if (!fill) return;
+    var f = fill; fill = null;
+    document.body.classList.remove("filling");
+    paintFill();
+    if (f.to === f.from) return;
+    var lo = Math.min(f.from, f.to), hi = Math.max(f.from, f.to), day = kst().date;
+    var rooms = state.day === day ? state.rooms : emptyRooms(), changes = [];
+    for (var k = lo; k <= hi; k++) {
+      if (k === f.from) continue;
+      changes.push({ room: f.room, slot: k, before: rooms[f.room][k] || "", after: f.name });
+    }
+    record(changes);
+    applyChanges(changes, false);
+    focusInline();
+    toast((hi - lo) + "칸에 복사했어요");
+  });
   // 단축키 안내가 입력칸을 가리면 화면 위쪽으로
   function placeKeyhint() {
     var k = document.querySelector(".keyhint"), inp = document.getElementById("inline-input");
@@ -797,7 +852,7 @@
     document.addEventListener(ev, function () { lastActive = Date.now(); }, true);
   });
   setInterval(function () {
-    if (!state.isAdmin || !KB || state.editing || state.inlineBusy || drag.on) return;
+    if (!state.isAdmin || !KB || state.editing || state.inlineBusy || drag.on || fill) return;
     if (Date.now() - lastActive < IDLE_MS || document.visibilityState !== "visible") return;
     var t = idleTarget(), cur = state.inline;
     if (cur && cur.room === t.room && cur.slot === t.slot && (state.inlineMode || "select") === "select" && !state.range) return;
