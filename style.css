@@ -100,7 +100,7 @@ body.has-bar .foot{padding-bottom:150px}
 .notice.warn{border-color:var(--accent);color:var(--ink)}
 .login{margin-top:16px;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--paper);display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .login p{margin:0;flex-basis:100%;font-size:13px;color:var(--muted)}
-input[type=email],.bar input{flex:1 1 180px;min-width:0;font:inherit;font-size:16px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+input[type=email],input[type=password],.bar input{flex:1 1 180px;min-width:0;font:inherit;font-size:16px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
 .bar{position:fixed;left:0;right:0;bottom:0;background:var(--paper);border-top:1px solid var(--line);padding-top:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));z-index:5;box-shadow:0 -6px 20px rgba(0,0,0,.08)}
 .bar-in{max-width:760px;margin:0 auto;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .bar .hint{flex-basis:100%;font-size:13px;color:var(--muted)}
@@ -122,3 +122,4 @@ input[type=email],.bar input{flex:1 1 180px;min-width:0;font:inherit;font-size:1
 .admin-foot{margin-top:16px}
 a.btn{color:var(--ink);text-decoration:none;display:inline-block}
 a.btn.link{color:var(--muted);text-decoration:underline}
+.login-err{color:var(--accent)!important}

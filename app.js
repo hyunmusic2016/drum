@@ -694,23 +694,21 @@
       return wrap;
     }
     var f = el("form", "login");
-    f.appendChild(el("p", null, "관리자 이메일을 입력하면 로그인 링크를 보내 드려요."));
     var inp = el("input"); inp.type = "email"; inp.id = "admin-email"; inp.required = true;
-    inp.placeholder = "admin@example.com"; inp.autocomplete = "email"; inp.setAttribute("aria-label", "관리자 이메일");
-    f.appendChild(inp);
-    var sbtn = el("button", "btn primary", "링크 받기"); sbtn.type = "submit"; f.appendChild(sbtn);
-    if (state.loginMsg) f.appendChild(el("p", null, state.loginMsg));
+    inp.placeholder = "이메일"; inp.autocomplete = "username"; inp.setAttribute("aria-label", "관리자 이메일");
+    var pw = el("input"); pw.type = "password"; pw.id = "admin-password"; pw.required = true;
+    pw.placeholder = "비밀번호"; pw.autocomplete = "current-password"; pw.setAttribute("aria-label", "비밀번호");
+    f.appendChild(inp); f.appendChild(pw);
+    var sbtn = el("button", "btn primary", "로그인"); sbtn.type = "submit"; f.appendChild(sbtn);
+    if (state.loginMsg) f.appendChild(el("p", "login-err", state.loginMsg));
     f.onsubmit = function (e) {
-      e.preventDefault();
-      sbtn.disabled = true;
-      sb.auth.signInWithOtp({
-        email: inp.value.trim(),
-        options: { emailRedirectTo: location.origin + location.pathname, shouldCreateUser: true }
-      }).then(function (res) {
-        state.loginMsg = res.error ? "링크를 보내지 못했어요: " + res.error.message
-          : "메일함을 확인해 주세요. 링크를 누르면 이 페이지로 돌아와 로그인됩니다.";
+      e.preventDefault(); sbtn.disabled = true;
+      sb.auth.signInWithPassword({ email: inp.value.trim(), password: pw.value }).then(function (res) {
+        state.loginMsg = res.error
+          ? (/invalid/i.test(res.error.message) ? "이메일 또는 비밀번호가 맞지 않아요." : "로그인하지 못했어요: " + res.error.message)
+          : "";
         render();
-      });
+      }, function () { state.loginMsg = "로그인하지 못했어요. 인터넷 연결을 확인해 주세요."; render(); });
     };
     wrap.appendChild(f);
     return wrap;

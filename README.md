@@ -34,7 +34,7 @@ Supabase **Authentication > URL Configuration**에서
 
 ## 사용법
 
-- 관리자: 페이지 맨 아래 **관리자 로그인** → 이메일로 온 링크 클릭 → **예약 편집**
+- 관리자: Supabase Authentication > Users > Add user 로 이메일·비밀번호 계정을 만들고 admins 표에 이메일 등록 → 페이지 맨 아래 **관리자 로그인**
   → 칸 여러 개 선택 → 이름 입력 후 **적용** → **저장**
 - 방문자: 링크만 공유하면 됩니다.
 
