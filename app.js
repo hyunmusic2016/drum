@@ -107,11 +107,9 @@
     tl.appendChild(el("h1", null, "합주실 · 드럼연습실 예약"));
     var ck = el("span", "clock", clockText()); ck.id = "clock"; tl.appendChild(ck);
     l.appendChild(tl);
-    var dt = el("div", "date");
     var lv = el("span", "chip live" + (state.live ? "" : " off"), state.live ? "실시간" : "자동 새로고침");
     lv.id = "livechip";
-    if (sb) dt.appendChild(lv);
-    l.appendChild(dt);
+    if (sb) tl.appendChild(lv); // 현재 시각 오른쪽
     hd.appendChild(l);
 
     var tools = el("div", "tools");
