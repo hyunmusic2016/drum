@@ -502,8 +502,15 @@
       a();
     };
     // 다른 칸을 누르면 blur 다음에 click 이 오므로 잠깐 기다렸다가 저장
+    // 버튼을 누를 때 한글이 아직 조합 중이면 먼저 조합을 끝냄 (윈도우 크롬: 안 끝내면 글자가 사라지거나 다음 칸으로 넘어감)
+    var noBlurSave = false;
+    function finishComposition(then) {
+      if (!composing) { then(); return; }
+      noBlurSave = true; inp.blur(); noBlurSave = false; composing = false; pending = null;
+      setTimeout(function () { state.inlineValue = inp.value; then(); }, 0);
+    }
     inp.onblur = function () {
-      if (rendering || done || state.inlineBusy) return;
+      if (noBlurSave || rendering || done || state.inlineBusy) return;
       done = true; blurValue = inp.value;
       blurTimer = setTimeout(function () { blurTimer = null; commitInline(blurValue, null); }, 250);
     };
@@ -515,8 +522,11 @@
     ok.onclick = function (e) {
       e.preventDefault();
       if (blurTimer) { clearTimeout(blurTimer); blurTimer = null; }
-      done = true;
-      commitInline(state.inlineValue != null ? state.inlineValue : inp.value, null);
+      finishComposition(function () {
+        if (done) return;
+        done = true;
+        commitInline(inp.value, null);
+      });
     };
     var acts = el("div", "acts" + (i >= SLOTS - 2 ? " up" : ""));
     acts.appendChild(ok);
@@ -524,7 +534,7 @@
     eb.dataset.tip = mod + "+Enter · 1시간 바로 저장";
     eb.setAttribute("aria-label", "30분 더 예약");
     eb.addEventListener("mousedown", function (e) { e.preventDefault(); }); // 입력창 포커스 유지
-    eb.onclick = function (e) { e.preventDefault(); extendInline(); };
+    eb.onclick = function (e) { e.preventDefault(); finishComposition(extendInline); };
     acts.appendChild(eb);
     d.appendChild(acts);
     // 키보드 단축키 안내 (입력 중에만, 키보드가 있는 기기에서만 보임)
