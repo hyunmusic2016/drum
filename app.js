@@ -388,6 +388,15 @@
     }
     render(); focusInline(true);
   }
+  // 한글 입력 중에는 윈도우 크롬이 key 를 "Process" 로 보냄 → code 로 실제 키를 알아냄
+  var ignoreKeysUntil = 0;
+  function keyOf(e) {
+    if (e.key === "Process" || e.keyCode === 229) {
+      if (e.code === "Enter" || e.code === "NumpadEnter") return "Enter";
+      if (/^Arrow(Up|Down|Left|Right)$/.test(e.code)) return e.code;
+    }
+    return e.key;
+  }
   function inlineCell(r, i, v, hour) {
     // 엑셀처럼: select = 칸만 선택(커서 안 보임, 치면 내용 교체) / type = 치는 중 / edit = 커서 깜빡이며 고치기
     var mode = state.inlineMode || "select";
@@ -425,7 +434,8 @@
     // 키 -> 실행할 동작 (실행 시점의 입력값을 읽음)
     function actionFor(e) {
       var cur = state.inline; if (!cur) return null;
-      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) return function () { // Ctrl(⌘)+Enter: 1시간으로 저장
+      var k = keyOf(e);
+      if (k === "Enter" && (e.ctrlKey || e.metaKey)) return function () { // Ctrl(⌘)+Enter: 1시간으로 저장
         if (done || state.inline !== cur) return;
         if (!(cur.span > 0)) {
           var why = extendBlock(cur, (inp.value || "").trim());
@@ -434,27 +444,32 @@
         }
         go(below(cur));
       };
-      if (e.key === "Enter") return function () { if (!done && state.inline === cur) go(below(cur)); };
-      if (e.key === "ArrowDown" && cur.slot + (cur.span || 0) < SLOTS - 1)
+      if (k === "Enter") return function () { if (!done && state.inline === cur) go(below(cur)); };
+      if (k === "ArrowDown" && cur.slot + (cur.span || 0) < SLOTS - 1)
         return function () { if (!done && state.inline === cur) go({ room: cur.room, slot: cur.slot + (cur.span || 0) + 1 }); };
-      if (e.key === "ArrowUp" && cur.slot > 0)
+      if (k === "ArrowUp" && cur.slot > 0)
         return function () { if (!done && state.inline === cur) go({ room: cur.room, slot: cur.slot - 1 }); };
       // ←→ : 칸 선택·타이핑 중엔 옆 방으로 이동, 커서로 고치는 중(edit)엔 커서만 이동
-      if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && !e.shiftKey && mode !== "edit") {
-        var target = e.key === "ArrowLeft" ? (cur.room === "drum" ? "band" : null) : (cur.room === "band" ? "drum" : null);
+      if ((k === "ArrowLeft" || k === "ArrowRight") && !e.shiftKey && mode !== "edit") {
+        var target = k === "ArrowLeft" ? (cur.room === "drum" ? "band" : null) : (cur.room === "band" ? "drum" : null);
         if (target) return function () { if (!done && state.inline === cur) go({ room: target, slot: cur.slot }); };
         return function () {};
       }
       return null;
     }
-    var pending = null;
+    var pending = null, composing = false;
     // 한글 조합 중에 누른 Enter·⌘+Enter·↑↓ 는 조합이 끝나자마자 실행 (두 번 누를 필요 없음)
+    inp.addEventListener("compositionstart", function () { composing = true; });
     inp.addEventListener("compositionend", function () {
+      composing = false;
       if (!pending) return;
       var a = pending; pending = null;
+      ignoreKeysUntil = Date.now() + 250; // 윈도우 크롬: 조합이 끝난 뒤 같은 Enter 가 한 번 더 들어오는 것 무시
       setTimeout(a, 0);
     });
     inp.onkeydown = function (e) {
+      var kk = keyOf(e);
+      if (Date.now() < ignoreKeysUntil && (kk === "Enter" || isArrow(kk))) { e.preventDefault(); return; }
       var cur = state.inline;
       var untouched = inp.value === (state.inlineOrig || "") && !(cur && cur.span > 0);
       if (e.key === "Escape") {
@@ -481,9 +496,9 @@
       if (e.key === "Tab") { e.preventDefault(); return; } // Tab 은 아무 동작 안 함
       var a = actionFor(e);
       if (!a) return;
-      if (e.isComposing) { pending = a; return; }        // 조합 끝(compositionend) 뒤에 실행
+      if (e.isComposing || composing) { pending = a; return; } // 조합 끝(compositionend) 뒤에 실행
       e.preventDefault();
-      if (e.keyCode === 229) { setTimeout(a, 0); return; } // 사파리: 조합이 막 끝난 직후의 키
+      if (e.keyCode === 229) { ignoreKeysUntil = Date.now() + 250; setTimeout(a, 0); return; } // 사파리: 조합이 막 끝난 직후의 키
       a();
     };
     // 다른 칸을 누르면 blur 다음에 click 이 오므로 잠깐 기다렸다가 저장
