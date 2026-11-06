@@ -1,3 +1,8 @@
+/* 페이퍼로지 (Paperlogy, OFL) — 눈누 CDN */
+@font-face{font-family:"Paperlogy";src:url("https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-4Regular.woff2") format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Paperlogy";src:url("https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-5Medium.woff2") format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:"Paperlogy";src:url("https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-6SemiBold.woff2") format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:"Paperlogy";src:url("https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-7Bold.woff2") format("woff2");font-weight:700;font-display:swap}
 /* Layout: one shared time column with the two rooms side by side, like the paper sheet; edit bar docks at the bottom for the admin */
 :root{
   --bg:#f5f6f4; --paper:#ffffff; --ink:#1d2321; --muted:#68716d; --line:#d9ddda; --band:#eceeec;
@@ -7,8 +12,8 @@
   --ok:#2f8f46; /* 확인 버튼 */
   --band-line:#6f95e6; --drum-line:#6fb55e; /* 선택 테두리 */
   --warn:#d62d20; /* 안내 빨간 글씨 */
-  --f-body:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,system-ui,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
-  --f-mono:"Pretendard Variable",Pretendard,-apple-system,system-ui,sans-serif; /* 시간·숫자도 Pretendard (tabular-nums로 자리 맞춤) */
+  --f-body:"Paperlogy",-apple-system,BlinkMacSystemFont,system-ui,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-mono:"Paperlogy",-apple-system,system-ui,sans-serif; /* 시간·숫자도 페이퍼로지 (tabular-nums로 자리 맞춤) */
   --name-size:16px; /* 예약자 이름 글씨 크기 (모든 칸 동일) */
   color-scheme:light;
 }
