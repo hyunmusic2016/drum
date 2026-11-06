@@ -298,8 +298,21 @@
     }
   });
   function rangeCount() { var g = state.range; return g ? (g.r1 - g.r0 + 1) * (g.s1 - g.s0 + 1) : 0; }
-  function deleteRange() {
+  function deleteRange(confirmed) {
     var g = state.range; if (!g || !sb) return;
+    if (!confirmed) {
+      var cnt = 0, names = [];
+      for (var r0 = g.r0; r0 <= g.r1; r0++) for (var s0 = g.s0; s0 <= g.s1; s0++) {
+        var v0 = state.day === kst().date ? state.rooms[ROOMS[r0].k][s0] : "";
+        if (v0) { cnt++; if (names.indexOf(v0) === -1) names.push(v0); }
+      }
+      if (cnt) {
+        askDelete(cnt + "칸 · " + names.slice(0, 4).join(", ") + (names.length > 4 ? " 외" : ""),
+          function () { deleteRange(true); },
+          function () { paintRange(); });
+        return;
+      }
+    }
     var day = kst().date;
     if (state.day !== day) { state.rooms = emptyRooms(); state.day = day; }
     var removed = []; // {room, slot, name}
@@ -750,8 +763,54 @@
     sb.from("reservations").upsert(slots.map(function (k) { return { day: day, room: room, slot: k, name: name, updated_at: now }; }))
       .then(function (res) { if (res.error) { toast("되돌리지 못했어요. 칸을 눌러 직접 고쳐 주세요."); load(); } });
   }
-  function commitInline(value, next) {
+  // ---------- 삭제 확인 창 ----------
+  function askDelete(detail, onYes, onNo) {
+    var old = document.getElementById("confirm"); if (old) old.remove();
+    var ov = el("div", "confirm-ov"); ov.id = "confirm";
+    var box = el("div", "confirm-box"); box.setAttribute("role", "alertdialog"); box.setAttribute("aria-modal", "true");
+    box.appendChild(el("p", "confirm-q", "삭제하시겠습니까?"));
+    if (detail) box.appendChild(el("p", "confirm-d", detail));
+    var row = el("div", "confirm-row");
+    var no = el("button", "btn", "취소"); no.type = "button";
+    var yes = el("button", "btn danger-fill", "삭제"); yes.type = "button";
+    row.appendChild(no); row.appendChild(yes); box.appendChild(row); ov.appendChild(box);
+    function close(ok) {
+      document.removeEventListener("keydown", onKey, true);
+      ov.remove();
+      (ok ? onYes : onNo)();
+    }
+    function onKey(e) {
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(false); }
+      else if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); e.stopPropagation(); close(document.activeElement !== no); }
+      else if (e.key === "Tab" || e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); e.stopPropagation(); (document.activeElement === yes ? no : yes).focus(); }
+      else e.stopPropagation();
+    }
+    no.onclick = function () { close(false); };
+    yes.onclick = function () { close(true); };
+    ov.addEventListener("pointerdown", function (e) { if (e.target === ov) close(false); });
+    document.addEventListener("keydown", onKey, true);
+    document.body.appendChild(ov);
+    yes.focus();
+  }
+  function detailText(room, slots) {
+    var n = ROOMS[roomIdx(room)].n, lo = Math.min.apply(null, slots), hi = Math.max.apply(null, slots);
+    return n + " " + label(lo).split("~")[0] + "~" + label(hi).split("~")[1];
+  }
+
+  function commitInline(value, next, confirmed) {
     var cur = state.inline; if (!cur) return;
+    // 예약을 지우는 경우(이름을 비우고 저장)는 먼저 확인
+    if (!confirmed && !(value || "").trim()) {
+      var had = [];
+      for (var q = cur.slot; q <= cur.slot + (cur.span || 0); q++) if (state.rooms[cur.room][q] && state.day === kst().date) had.push(q);
+      if (had.length) {
+        var names = had.map(function (q) { return state.rooms[cur.room][q]; }).filter(function (v, i, a) { return a.indexOf(v) === i; });
+        askDelete(detailText(cur.room, had) + " · " + names.join(", "),
+          function () { state.inline = cur; commitInline(value, next, true); },
+          function () { var c0 = { room: cur.room, slot: cur.slot }; state.inline = null; state.inlineValue = null; selectCell(c0); });
+        return;
+      }
+    }
     var fx = koFix((value || "").trim());
     var name = fx.text, day = kst().date;
     if (state.day !== day) { state.rooms = emptyRooms(); state.day = day; }
