@@ -541,7 +541,21 @@
     eb.dataset.tip = mod + "+Enter · 1시간 바로 저장";
     eb.setAttribute("aria-label", "30분 더 예약");
     eb.addEventListener("mousedown", function (e) { e.preventDefault(); }); // 입력창 포커스 유지
-    eb.onclick = function (e) { e.preventDefault(); extendInline(); };
+    // [+30분] = 30분 늘려서 바로 저장 (마우스·터치)
+    eb.onclick = function (e) {
+      e.preventDefault();
+      if (blurTimer) { clearTimeout(blurTimer); blurTimer = null; }
+      finishComposition(function () {
+        var cur = state.inline;
+        if (done || !cur) return;
+        var why = extendBlock(cur, (inp.value || "").trim());
+        if (why) { toast(why); return; }
+        if (!(inp.value || "").trim()) { toast("이름을 먼저 입력해 주세요"); return; }
+        cur.span = (cur.span || 0) + 1;
+        done = true;
+        commitInline(inp.value, null);
+      });
+    };
     acts.appendChild(eb);
     d.appendChild(acts);
     // 키보드 단축키 안내 (입력 중에만, 키보드가 있는 기기에서만 보임)
