@@ -383,10 +383,17 @@
     else if (other && other !== name) toast("다음 칸에 '" + other + "' 예약이 있어서 더 늘릴 수 없어요");
     else {
       cur.span = (cur.span || 0) + 1;
+      // 입력칸은 그대로 두고 아래 칸만 미리보기로 바꿈 (다시 그리면 한글 조합이 깨짐)
+      var inp = document.getElementById("inline-input");
+      if (inp) state.inlineValue = inp.value;
+      var ri = roomIdx(cur.room), kids = document.querySelector(".sheet").children;
+      var old = kids[3 + next * 3 + 1 + ri];
+      if (old) old.replaceWith(previewCell(ROOMS[ri], next, next > 0 && next % 2 === 0));
       var a = label(cur.slot).split("~")[0], b = label(cur.slot + cur.span).split("~")[1];
       toast(a + "~" + b + " (" + durText(cur.span + 1) + ")");
     }
-    render(); focusInline(true);
+    var inp2 = document.getElementById("inline-input");
+    if (inp2 && document.activeElement !== inp2) focusInline(true);
   }
   // 한글 입력 중에는 윈도우 크롬이 key 를 "Process" 로 보냄 → code 로 실제 키를 알아냄
   var ignoreKeysUntil = 0;
@@ -534,7 +541,7 @@
     eb.dataset.tip = mod + "+Enter · 1시간 바로 저장";
     eb.setAttribute("aria-label", "30분 더 예약");
     eb.addEventListener("mousedown", function (e) { e.preventDefault(); }); // 입력창 포커스 유지
-    eb.onclick = function (e) { e.preventDefault(); finishComposition(extendInline); };
+    eb.onclick = function (e) { e.preventDefault(); extendInline(); };
     acts.appendChild(eb);
     d.appendChild(acts);
     // 키보드 단축키 안내 (입력 중에만, 키보드가 있는 기기에서만 보임)

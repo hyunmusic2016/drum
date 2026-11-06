@@ -237,3 +237,4 @@ body:has(.wrap.home) .foot{max-width:calc(var(--home-w, 760px) + 32px)}
 /* 홈: 맨 위 영문 문구 없이 제목 줄을 옆에 놓는 다른 페이지(B1 음악 연습실 예약)와 같은 높이로 */
 .page > .wrap.home{padding-top:5px}
 .wrap.home header{margin-bottom:14px}
+.cell.inline:not(.selmode) .fill-handle{display:none} /* 글자를 치기 시작하면 채우기 동그라미 숨김 */
