@@ -243,7 +243,7 @@
     }
   });
   document.addEventListener("pointerdown", function (e) {
-    if (state.range && !(e.target.closest && (e.target.closest(".cell.quick") || e.target.closest(".toast")))) clearRange();
+    if (state.range && !(e.target.closest && (e.target.closest(".cell.quick") || e.target.closest(".toast") || e.target.closest(".confirm-ov")))) clearRange();
   });
   // 화살표 한 칸 이동 (방 2개 x 시간 18칸 안에서)
   function stepCell(c, key) {
@@ -298,8 +298,9 @@
     }
   });
   function rangeCount() { var g = state.range; return g ? (g.r1 - g.r0 + 1) * (g.s1 - g.s0 + 1) : 0; }
-  function deleteRange(confirmed) {
-    var g = state.range; if (!g || !sb) return;
+  function deleteRange(confirmed, keep) {
+    var g = keep || state.range; if (!g || !sb) return;
+    state.range = g;
     if (!confirmed) {
       var cnt = 0, names = [];
       for (var r0 = g.r0; r0 <= g.r1; r0++) for (var s0 = g.s0; s0 <= g.s1; s0++) {
@@ -308,7 +309,7 @@
       }
       if (cnt) {
         askDelete(cnt + "칸 · " + names.slice(0, 4).join(", ") + (names.length > 4 ? " 외" : ""),
-          function () { deleteRange(true); },
+          function () { deleteRange(true, g); },
           function () { paintRange(); });
         return;
       }
