@@ -105,10 +105,14 @@
       document.dispatchEvent(new Event("sheet-layout"));
     }
   }
-  // 왼쪽 아래 관리자 로그인 표시 (파랑 = 로그인, 회색 = 로그인 안 함)
+  // 버전 위 관리자 로그인 표시 (파랑 = 로그인, 회색 = 로그인 안 함)
   function paintAdminDot() {
     var d = document.getElementById("admin-dot");
-    if (!d) { d = el("span", "admin-dot"); d.id = "admin-dot"; document.body.appendChild(d); }
+    if (!d) {
+      d = el("span", "admin-dot"); d.id = "admin-dot";
+      var ver = document.querySelector(".foot .ver"); // 버전 표시 바로 위
+      if (ver) ver.parentNode.insertBefore(d, ver); else document.body.appendChild(d);
+    }
     d.classList.toggle("on", !!state.isAdmin);
     d.setAttribute("aria-label", state.isAdmin ? "관리자 로그인됨" : "관리자 로그인 안 됨");
     d.setAttribute("role", "img");

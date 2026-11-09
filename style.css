@@ -251,7 +251,8 @@ body:has(.wrap.home) .foot{max-width:calc(var(--home-w, 760px) + 32px)}
 .confirm-row{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
 .btn.danger-fill{background:var(--warn);border-color:var(--warn);color:#fff}
 .confirm-row .btn:focus-visible{outline:3px solid var(--band-line);outline-offset:2px}
-/* 왼쪽 아래 관리자 로그인 표시 (실시간 표시의 점과 같은 크기) */
-.admin-dot{position:fixed;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));width:7px;height:7px;border-radius:50%;background:var(--muted);opacity:.7;z-index:15;pointer-events:none}
+/* 버전 위 관리자 로그인 표시 (실시간 표시의 점과 같은 크기) */
+.foot{flex-direction:column;align-items:flex-end;gap:6px}
+.admin-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);opacity:.7;margin-right:2px}
 .admin-dot.on{background:#2f6fe4;opacity:1}
 .info-only .admin-dot{display:none}
