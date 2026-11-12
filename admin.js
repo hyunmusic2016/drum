@@ -1,5 +1,9 @@
 (function () {
   "use strict";
+  // 표·함수 이름 앞글자 (config.js 의 TABLE_PREFIX, 예: "drum_"). 다른 사이트와 Supabase 프로젝트를 같이 쓸 때 겹치지 않게
+  var PFX = (window.APP_CONFIG && window.APP_CONFIG.TABLE_PREFIX) || "";
+  function T(n) { return PFX + n; }
+  var BUCKET = PFX ? PFX.replace(/_$/, "") + "-site" : "site";
 
   var ROOMS = [
     { k: "band", n: "합주실", c: "b" },
@@ -58,12 +62,12 @@
   function checkAdmin() {
     if (!sb || !state.session) { state.isAdmin = false; state.checked = true; return Promise.resolve(); }
     var email = state.session.user && state.session.user.email;
-    return sb.from("admins").select("email").eq("email", email).maybeSingle().then(function (res) {
+    return sb.from(T("admins")).select("email").eq("email", email).maybeSingle().then(function (res) {
       state.isAdmin = !!(res.data && !res.error); state.checked = true;
     });
   }
   function loadLessons() {
-    return sb.from("lesson_slots").select("weekday,room,slot,label").then(function (res) {
+    return sb.from(T("lesson_slots")).select("weekday,room,slot,label").then(function (res) {
       if (res.error) { toast("수업 시간표를 불러오지 못했어요. lessons_30min.sql을 실행했는지 확인해 주세요."); return; }
       var m = {};
       (res.data || []).forEach(function (l) { m[key(l.weekday, l.room, l.slot)] = l.label; });
@@ -92,12 +96,12 @@
     var df = diff(); if (!df.n || state.saving) return;
     state.saving = true; render();
     var jobs = [];
-    if (df.add.length) jobs.push(sb.from("lesson_slots").upsert(df.add.map(function (k) { var c = parseKey(k); c.label = LABEL; return c; })));
+    if (df.add.length) jobs.push(sb.from(T("lesson_slots")).upsert(df.add.map(function (k) { var c = parseKey(k); c.label = LABEL; return c; })));
     var groups = {};
     df.del.forEach(function (k) { var c = parseKey(k), g = c.weekday + ":" + c.room; (groups[g] = groups[g] || []).push(c.slot); });
     Object.keys(groups).forEach(function (g) {
       var p = g.split(":");
-      jobs.push(sb.from("lesson_slots").delete().eq("weekday", +p[0]).eq("room", p[1]).in("slot", groups[g]));
+      jobs.push(sb.from(T("lesson_slots")).delete().eq("weekday", +p[0]).eq("room", p[1]).in("slot", groups[g]));
     });
     Promise.all(jobs).then(function (res) {
       state.saving = false;
@@ -133,11 +137,11 @@
   function syncToday(cells, on) {
     var day = kst().date;
     if (on) {
-      sb.from("reservations").upsert(cells.map(function (c) { return { day: day, room: c.room, slot: c.slot, name: LABEL }; }),
+      sb.from(T("reservations")).upsert(cells.map(function (c) { return { day: day, room: c.room, slot: c.slot, name: LABEL }; }),
         { onConflict: "day,room,slot", ignoreDuplicates: true }).then(function () {}, function () {});
     } else ROOMS.forEach(function (r) {
       var sl = cells.filter(function (c) { return c.room === r.k; }).map(function (c) { return c.slot; });
-      if (sl.length) sb.from("reservations").delete().eq("day", day).eq("room", r.k).eq("name", LABEL).in("slot", sl)
+      if (sl.length) sb.from(T("reservations")).delete().eq("day", day).eq("room", r.k).eq("name", LABEL).in("slot", sl)
         .then(function () {}, function () {});
     });
   }
@@ -281,7 +285,7 @@
   var SC = window.SiteContent;
   function clone(x) { return JSON.parse(JSON.stringify(x)); }
   function loadContent() {
-    return sb.from("site_content").select("key,value").then(function (res) {
+    return sb.from(T("site_content")).select("key,value").then(function (res) {
       if (res.error) toast("안내 문구를 불러오지 못했어요. site_content.sql을 실행했는지 확인해 주세요.");
       state.content = res.error ? SC.defaults() : SC.fromRows(res.data);
       state.contentSaved = clone(state.content);
@@ -391,9 +395,9 @@
           up.disabled = true; up.textContent = "올리는 중…";
           var ext = (f.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
           var path = "qr-" + Date.now() + "." + ext;
-          sb.storage.from("site").upload(path, f, { contentType: f.type, upsert: true }).then(function (res) {
+          sb.storage.from(BUCKET).upload(path, f, { contentType: f.type, upsert: true }).then(function (res) {
             if (res.error) { up.disabled = false; up.textContent = "이미지 올리기"; toast("올리지 못했어요: " + res.error.message); return; }
-            b.image = sb.storage.from("site").getPublicUrl(path).data.publicUrl;
+            b.image = sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
             render();
           }, function () { up.disabled = false; up.textContent = "이미지 올리기"; toast("올리지 못했어요. 인터넷 연결을 확인해 주세요."); });
         };
@@ -476,7 +480,7 @@
     if (!contentDirty() || state.contentSaving) return;
     state.contentSaving = true; render();
     var now = new Date().toISOString();
-    sb.from("site_content").upsert([
+    sb.from(T("site_content")).upsert([
       { key: "boxes", value: JSON.stringify(state.content), updated_at: now },
       { key: "info_settings", value: JSON.stringify(state.cset), updated_at: now }
     ]).then(function (res) {

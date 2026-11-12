@@ -1,5 +1,9 @@
 (function () {
   "use strict";
+  // 표·함수 이름 앞글자 (config.js 의 TABLE_PREFIX, 예: "drum_"). 다른 사이트와 Supabase 프로젝트를 같이 쓸 때 겹치지 않게
+  var PFX = (window.APP_CONFIG && window.APP_CONFIG.TABLE_PREFIX) || "";
+  function T(n) { return PFX + n; }
+  var BUCKET = PFX ? PFX.replace(/_$/, "") + "-site" : "site";
   var aside = document.getElementById("info");
   if (!aside || !window.SiteContent) return;
   var SC = window.SiteContent, boxes = SC.defaults(), settings = Object.assign({}, SC.SETTINGS);
@@ -53,7 +57,7 @@
   paint();
   if (cfg.SUPABASE_URL && window.supabase) {
     var sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false, storageKey: "sb-info" } });
-    sb.from("site_content").select("key,value").then(function (res) {
+    sb.from(T("site_content")).select("key,value").then(function (res) {
       if (res.error || !res.data) return;
       boxes = SC.fromRows(res.data); settings = SC.settingsFromRows(res.data);
       paint();

@@ -1,5 +1,9 @@
 (function () {
   "use strict";
+  // 표·함수 이름 앞글자 (config.js 의 TABLE_PREFIX, 예: "drum_"). 다른 사이트와 Supabase 프로젝트를 같이 쓸 때 겹치지 않게
+  var PFX = (window.APP_CONFIG && window.APP_CONFIG.TABLE_PREFIX) || "";
+  function T(n) { return PFX + n; }
+  var BUCKET = PFX ? PFX.replace(/_$/, "") + "-site" : "site";
 
   var SLOTS = 18;            // 1:00 ~ 10:00 (오후), 30분 단위
   var START = 13 * 60;       // 13:00
@@ -53,12 +57,12 @@
   function applyLessons(day) {
     if (lessonsDay === day) return Promise.resolve();
     lessonsDay = day;
-    return Promise.resolve(sb.rpc("apply_today_lessons")).then(function () {}, function () {});
+    return Promise.resolve(sb.rpc(T("apply_today_lessons"))).then(function () {}, function () {});
   }
   function load() {
     if (!sb) return Promise.resolve();
     var day = kst().date;
-    return applyLessons(day).then(function () { return sb.from("reservations").select("room,slot,name").eq("day", day).then(function (res) {
+    return applyLessons(day).then(function () { return sb.from(T("reservations")).select("room,slot,name").eq("day", day).then(function (res) {
       if (res.error) { state.loadError = "예약을 불러오지 못했어요. 잠시 후 새로고침해 주세요."; render(); return; }
       var rooms = emptyRooms();
       (res.data || []).forEach(function (r) { if (rooms[r.room]) rooms[r.room][r.slot] = r.name; });
@@ -71,7 +75,7 @@
     if (!sb) return;
     if (channel) sb.removeChannel(channel);
     channel = sb.channel("reservations-live")
-      .on("postgres_changes", { event: "*", schema: "public", table: "reservations" }, function () { load(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: T("reservations") }, function () { load(); })
       .subscribe(function (status) {
         state.live = status === "SUBSCRIBED";
         if (!state.editing) renderHeaderLive();
@@ -82,7 +86,7 @@
   function checkAdmin() {
     if (!sb || !state.session || PREVIEW) { state.isAdmin = false; return Promise.resolve(); }
     var email = state.session.user && state.session.user.email;
-    return sb.from("admins").select("email").eq("email", email).maybeSingle().then(function (res) {
+    return sb.from(T("admins")).select("email").eq("email", email).maybeSingle().then(function (res) {
       state.isAdmin = !!(res.data && !res.error);
     });
   }
@@ -342,7 +346,7 @@
     if (KB) selectCell(back);
     var jobs = ROOMS.map(function (r) {
       var slots = removed.filter(function (x) { return x.room === r.k; }).map(function (x) { return x.slot; });
-      return slots.length ? sb.from("reservations").delete().eq("day", day).eq("room", r.k).in("slot", slots) : null;
+      return slots.length ? sb.from(T("reservations")).delete().eq("day", day).eq("room", r.k).in("slot", slots) : null;
     }).filter(Boolean);
     Promise.all(jobs).then(function (res) {
       var err = res.filter(function (x) { return x.error; })[0];
@@ -731,9 +735,9 @@
         var v = useBefore ? c.before : c.after;
         if (v) ups.push({ day: day, room: c.room, slot: c.slot, name: v, updated_at: now }); else dels.push(c.slot);
       });
-      if (dels.length) jobs.push(sb.from("reservations").delete().eq("day", day).eq("room", r.k).in("slot", dels));
+      if (dels.length) jobs.push(sb.from(T("reservations")).delete().eq("day", day).eq("room", r.k).in("slot", dels));
     });
-    if (ups.length) jobs.push(sb.from("reservations").upsert(ups));
+    if (ups.length) jobs.push(sb.from(T("reservations")).upsert(ups));
     return Promise.all(jobs).then(function (res) {
       if (res.some(function (x) { return x.error; })) { toast("저장하지 못했어요. 새로고침해 주세요."); load(); return false; }
       return true;
@@ -774,7 +778,7 @@
     slots.forEach(function (k) { state.rooms[room][k] = name; });
     render();
     var now = new Date().toISOString();
-    sb.from("reservations").upsert(slots.map(function (k) { return { day: day, room: room, slot: k, name: name, updated_at: now }; }))
+    sb.from(T("reservations")).upsert(slots.map(function (k) { return { day: day, room: room, slot: k, name: name, updated_at: now }; }))
       .then(function (res) { if (res.error) { toast("되돌리지 못했어요. 칸을 눌러 직접 고쳐 주세요."); load(); } });
   }
   // ---------- 삭제 확인 창 ----------
@@ -840,8 +844,8 @@
     state.inline = cur;
     var now = new Date().toISOString();
     var q = name
-      ? sb.from("reservations").upsert(slots.map(function (k) { return { day: day, room: cur.room, slot: k, name: name, updated_at: now }; }))
-      : sb.from("reservations").delete().eq("day", day).eq("room", cur.room).in("slot", slots);
+      ? sb.from(T("reservations")).upsert(slots.map(function (k) { return { day: day, room: cur.room, slot: k, name: name, updated_at: now }; }))
+      : sb.from(T("reservations")).delete().eq("day", day).eq("room", cur.room).in("slot", slots);
     function fail(msg) {
       state.inlineBusy = false; state.inline = null; state.queued = null; state.inlineValue = null;
       slots.forEach(function (k) { if (prev[k]) state.rooms[cur.room][k] = prev[k]; else delete state.rooms[cur.room][k]; });
@@ -945,9 +949,9 @@
     if (!upserts.length && !deletes.length) { state.editing = false; render(); return; }
     state.busy = true; state.status = ""; renderBar();
     var jobs = [];
-    if (upserts.length) jobs.push(sb.from("reservations").upsert(upserts));
+    if (upserts.length) jobs.push(sb.from(T("reservations")).upsert(upserts));
     deletes.forEach(function (d) {
-      jobs.push(sb.from("reservations").delete().match({ day: day, room: d.room, slot: d.slot }));
+      jobs.push(sb.from(T("reservations")).delete().match({ day: day, room: d.room, slot: d.slot }));
     });
     Promise.all(jobs).then(function (results) {
       state.busy = false;

@@ -8,5 +8,5 @@
   예외: 관리자 [안내 문구] 탭의 문구 규칙 한 줄(빈 줄·**굵게**·!빨강·{주소}).
 - 수정할 때마다 버전을 올린다. `index.html`·`admin.html`의 푸터 `vX.Y.Z`와 모든 `?v=` 쿼리를 함께 바꾸고 `CHANGELOG.md`에 기록한다.
   - 기능 추가·화면 변경: 가운데 자리, 오류·문구 수정: 끝자리, 구조 변경: 앞자리
-- 정적 사이트(GitHub Pages) + Supabase. 설정은 `config.js`, DB는 `supabase/schema.sql`(처음 설정), 이후 변경은 `supabase/*.sql` 파일로 추가.
+- 정적 사이트(GitHub Pages) + Supabase. 표·함수·저장소 이름은 반드시 T("이름")·BUCKET 으로 (config.js TABLE_PREFIX, B1 프로젝트와 같이 쓸 때 "drum_"). 설정은 `config.js`, DB는 `supabase/schema.sql`(처음 설정), 이후 변경은 `supabase/*.sql` 파일로 추가.
 - 페이지: `index.html`+`app.js`(예약표, 관리자 UI 없음. 로그인한 관리자는 칸 바로 입력), `admin.html`+`admin.js`(비로그인 시 로그인 화면, 로그인 시 탭 [정기 수업][안내 문구][비밀번호 변경]·로그아웃. 별도 로그인 페이지 없음), 공통 스타일 `style.css`.
