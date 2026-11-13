@@ -8,6 +8,9 @@
 - 기능 추가·화면 변경: 가운데 올림 (1.2.0)
 - 오류 수정·문구 수정: 끝자리 올림 (1.1.1)
 
+## v2.0.0 — 2026-11-13
+- Supabase를 계정 B(hyunmusic2016@naver.com)의 drum-room 프로젝트로 이전 (표 이름 drum_ 사용, 정기 수업·안내 문구·오늘 예약 옮김)
+
 ## v1.45.0 — 2026-11-12
 - B1 음악 연습실과 Supabase 프로젝트를 같이 쓸 준비: config.js 의 TABLE_PREFIX 로 표·함수·저장소 이름 앞글자 지정 (지금은 "" 그대로 동작)
 - supabase/shared_project_drum.sql: B1 프로젝트에 drum_ 표·권한·함수·실시간·drum-site 저장소 만들기
